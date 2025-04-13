@@ -1,94 +1,192 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, Send } from 'lucide-react';
-import KeySelector from './KeySelector';
-import SearchResults from './SearchResults';
-import { MelodyCard } from '@/types/melody';
+
+interface Sound {
+  id: string;
+  name: string;
+  url: string;
+  tags: string[] | string;
+  bpm?: number;
+  key?: string;
+}
 
 export default function SearchBox() {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [bpm, setBpm] = useState(120);
-  const [key, setKey] = useState('C');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<MelodyCard[] | null>(null);
-  
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
-      setSearchResults(null);
-      return;
+  const [query, setQuery] = useState('');
+  const [bpm, setBpm] = useState<string>('');
+  const [key, setKey] = useState<string>('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [results, setResults] = useState<Sound[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Musical keys for dropdown
+  const musicalKeys = [
+    'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+    'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'
+  ];
+
+  // Helper function to format tags for display
+  const formatTags = (tags: string[] | string | null): string => {
+    if (!tags) return 'No tags';
+    if (typeof tags === 'string') {
+      return tags.split(',').map(tag => tag.trim()).join(', ');
     }
-    
-    // Mock data for demonstration
-    const allResults = [
-      { id: '1', title: 'test Melody', key: 'B', bpm: 105, duration: '0:43' },
-      { id: '2', title: 'Summer Vibes', key: 'A', bpm: 128, duration: '1:15' },
-      { id: '3', title: 'Chill Beat', key: 'F', bpm: 95, duration: '2:30' },
-      { id: '4', title: 'Dance Track', key: 'C', bpm: 120, duration: '3:15' },
-      { id: '5', title: 'House Beat', key: 'C', bpm: 120, duration: '2:45' },
-    ];
-    
-    // Filter results based on BPM and key
-    const filteredResults = allResults.filter(melody => {
-      const matchesBpm = melody.bpm === bpm;
-      const matchesKey = melody.key.toLowerCase() === key.toLowerCase();
-      const matchesQuery = melody.title.toLowerCase().includes(searchQuery.toLowerCase());
+    if (Array.isArray(tags)) {
+      return tags.join(', ');
+    }
+    return 'No tags';
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim() && !bpm && !key) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const searchParams = new URLSearchParams();
+      if (query.trim()) searchParams.append('q', query);
+      if (bpm) searchParams.append('bpm', bpm);
+      if (key) searchParams.append('key', key);
+
+      console.log('Searching with params:', Object.fromEntries(searchParams));
+      const response = await fetch(`/api/search?${searchParams}`);
       
-      return matchesQuery && matchesBpm && matchesKey;
-    });
-    
-    setSearchResults(filteredResults);
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status} ${responseText}`);
+      }
+
+      const data = JSON.parse(responseText);
+      console.log('Search results:', data);
+      setResults(data);
+    } catch (err) {
+      console.error('Search error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to search sounds');
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className={`bg-white rounded-2xl shadow-sm transition-all duration-200 ${isExpanded ? 'h-[120px]' : 'h-[60px]'}`}>
-      <div className="flex items-center gap-2 px-6 h-[60px]">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search for your perfect sound"
-          className="flex-1 bg-transparent text-base text-gray-600 placeholder-gray-400 outline-none"
-        />
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <Settings className="w-5 h-5" />
-        </button>
-        <button 
-          onClick={handleSearch}
-          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <Send className="w-5 h-5" />
-        </button>
-      </div>
+    <div className="max-w-2xl mx-auto p-4 bg-[#1C1C1E]">
+      <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text">
+        Find your perfect sound
+      </h2>
+      <p className="text-gray-400 mb-8">
+        Search through our curated collection of sounds based on your project's needs
+      </p>
 
-      <div className={`px-6 pb-6 transition-opacity duration-200 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="flex items-center gap-8">
-          <div className="flex-1 flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-600">BPM</span>
-            <div className="flex-1">
+      <form onSubmit={handleSearch} className="mb-8 space-y-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="e.g. find a sound that resembles street lights at night"
+            className="flex-1 p-3 rounded-lg bg-[#2C2C2E] text-white placeholder:italic placeholder:text-gray-500 border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50 shadow-lg"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-6 py-3 bg-[#8B5CF6] text-white rounded-lg hover:bg-purple-600 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors duration-200 shadow-lg shadow-purple-500/20"
+          >
+            {loading ? 'Searching...' : 'Search'}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1 transition-colors duration-200"
+          >
+            <span>{showAdvanced ? 'Hide Advanced Search' : 'Show Advanced Search'}</span>
+            <svg 
+              className={`w-4 h-4 transform transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`}
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+
+        {showAdvanced && (
+          <div className="grid grid-cols-2 gap-4 p-6 bg-[#2C2C2E] rounded-lg shadow-xl">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                BPM
+              </label>
               <input
-                type="range"
-                min="60"
-                max="200"
+                type="number"
                 value={bpm}
-                onChange={(e) => setBpm(Number(e.target.value))}
-                className="w-full accent-blue-500"
+                onChange={(e) => setBpm(e.target.value)}
+                placeholder="Enter BPM..."
+                className="w-full p-3 rounded-lg bg-[#3C3C3E] text-white placeholder:text-gray-500 border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                min="0"
+                max="300"
               />
             </div>
-            <span className="text-sm font-medium text-gray-600">{bpm}</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Key
+              </label>
+              <select
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                className="w-full p-3 rounded-lg bg-[#3C3C3E] text-white border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              >
+                <option value="">Select key...</option>
+                {musicalKeys.map((k) => (
+                  <option key={k} value={k}>{k}</option>
+                ))}
+              </select>
+            </div>
           </div>
+        )}
+      </form>
 
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-600">Key</span>
-            <KeySelector value={key} onChange={setKey} />
-          </div>
+      {error && (
+        <div className="mb-6 p-4 bg-red-900/20 border border-red-500/20 text-red-400 rounded-lg">
+          {error}
         </div>
-      </div>
-      
-      {searchResults && <SearchResults results={searchResults} />}
+      )}
+
+      {results.length > 0 ? (
+        <div className="space-y-6">
+          {results.map((sound) => (
+            <div key={sound.id} className="bg-[#2C2C2E] p-6 rounded-lg shadow-xl">
+              <h3 className="text-xl font-semibold text-white mb-2">{sound.name}</h3>
+              <div className="text-sm text-gray-400 space-y-1 mb-4">
+                <p>Tags: {formatTags(sound.tags)}</p>
+                {sound.bpm && <p>BPM: {sound.bpm}</p>}
+                {sound.key && <p>Key: {sound.key}</p>}
+              </div>
+              <audio 
+                controls 
+                className="w-full [&::-webkit-media-controls-panel]:bg-[#3C3C3E] [&::-webkit-media-controls-current-time-display]:text-white [&::-webkit-media-controls-time-remaining-display]:text-white"
+              >
+                <source src={sound.url} type="audio/mpeg" />
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          ))}
+        </div>
+      ) : (
+        !loading && (query || bpm || key) && (
+          <div className="text-center text-purple-400/80 p-8">
+            We're working on adding more sounds. In the meantime, try another search.
+          </div>
+        )
+      )}
     </div>
   );
 }

@@ -3,11 +3,73 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 75, 85, 99;
-  --background-rgb: 243, 244, 246;
+  --foreground-rgb: 139, 92, 246;
+  --background-rgb: 18, 18, 20;
+  --purple-accent: 139, 92, 246;
+  --purple-light: 167, 139, 250;
+  --surface-1: 28, 28, 30;
+  --surface-2: 44, 44, 46;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+@layer base {
+  body {
+    background: rgb(var(--background-rgb));
+    color: rgb(var(--foreground-rgb));
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgb(var(--surface-1));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--purple-accent));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--purple-light));
+  }
+
+  /* Form elements */
+  input, select, textarea {
+    @apply bg-[#1C1C1E] text-purple-400 rounded-lg border-0 focus:ring-2 focus:ring-purple-500/50 focus:outline-none placeholder:text-purple-400/50;
+  }
+
+  button {
+    @apply transition-all duration-200;
+  }
+
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-purple-400 font-bold;
+  }
+
+  /* Links */
+  a {
+    @apply text-purple-400 hover:text-purple-300 transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .gradient-text {
+    @apply bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text;
+  }
+
+  .card {
+    @apply bg-[#1C1C1E] rounded-lg shadow-xl p-6;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-[#8B5CF6] text-white rounded-lg hover:bg-purple-600 disabled:bg-gray-700 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-[#2C2C2E] text-purple-400 rounded-lg hover:bg-[#3C3C3E] disabled:bg-gray-700 disabled:cursor-not-allowed;
+  }
 }

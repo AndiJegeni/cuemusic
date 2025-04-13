@@ -1,0 +1,4 @@
+src/generated/**/*
+src/types/prisma.d.ts
+prisma/**/*
+*.prisma 
