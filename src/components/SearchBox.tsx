@@ -20,13 +20,24 @@ export default function SearchBox() {
     }
     
     // Mock data for demonstration
-    const results = [
+    const allResults = [
       { id: '1', title: 'test Melody', key: 'B', bpm: 105, duration: '0:43' },
       { id: '2', title: 'Summer Vibes', key: 'A', bpm: 128, duration: '1:15' },
       { id: '3', title: 'Chill Beat', key: 'F', bpm: 95, duration: '2:30' },
+      { id: '4', title: 'Dance Track', key: 'C', bpm: 120, duration: '3:15' },
+      { id: '5', title: 'House Beat', key: 'C', bpm: 120, duration: '2:45' },
     ];
     
-    setSearchResults(results);
+    // Filter results based on BPM and key
+    const filteredResults = allResults.filter(melody => {
+      const matchesBpm = melody.bpm === bpm;
+      const matchesKey = melody.key.toLowerCase() === key.toLowerCase();
+      const matchesQuery = melody.title.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchesQuery && matchesBpm && matchesKey;
+    });
+    
+    setSearchResults(filteredResults);
   };
 
   return (
