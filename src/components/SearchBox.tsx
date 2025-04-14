@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
+import { toast } from 'react-hot-toast';
 
 interface Sound {
   id: string;
@@ -19,6 +21,13 @@ export default function SearchBox() {
   const [results, setResults] = useState<Sound[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savingSound, setSavingSound] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   // Musical keys for dropdown
   const musicalKeys = [
@@ -51,19 +60,12 @@ export default function SearchBox() {
       if (bpm) searchParams.append('bpm', bpm);
       if (key) searchParams.append('key', key);
 
-      console.log('Searching with params:', Object.fromEntries(searchParams));
       const response = await fetch(`/api/search?${searchParams}`);
-      
-      console.log('Response status:', response.status);
-      const responseText = await response.text();
-      console.log('Response text:', responseText);
-
       if (!response.ok) {
-        throw new Error(`Search failed: ${response.status} ${responseText}`);
+        throw new Error('Failed to search sounds');
       }
 
-      const data = JSON.parse(responseText);
-      console.log('Search results:', data);
+      const data = await response.json();
       setResults(data);
     } catch (err) {
       console.error('Search error:', err);
@@ -71,6 +73,32 @@ export default function SearchBox() {
       setResults([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveSound = async (soundId: string) => {
+    try {
+      setSavingSound(soundId);
+      const response = await fetch('/api/sounds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ soundId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Failed to save sound');
+      }
+
+      toast.success('Sound saved to library!');
+      setSavingSound(null);
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save sound');
+      setSavingSound(null);
     }
   };
 
@@ -160,11 +188,30 @@ export default function SearchBox() {
         </div>
       )}
 
+      {saveError && (
+        <div className={`mb-6 p-4 rounded-lg ${
+          saveError.includes('successfully') 
+            ? 'bg-green-900/20 border border-green-500/20 text-green-400'
+            : 'bg-red-900/20 border border-red-500/20 text-red-400'
+        }`}>
+          {saveError}
+        </div>
+      )}
+
       {results.length > 0 ? (
         <div className="space-y-6">
           {results.map((sound) => (
             <div key={sound.id} className="bg-[#2C2C2E] p-6 rounded-lg shadow-xl">
-              <h3 className="text-xl font-semibold text-white mb-2">{sound.name}</h3>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-xl font-semibold text-white">{sound.name}</h3>
+                <button
+                  onClick={() => handleSaveSound(sound.id)}
+                  disabled={savingSound === sound.id}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors duration-200"
+                >
+                  {savingSound === sound.id ? 'Saving...' : 'Save to Library'}
+                </button>
+              </div>
               <div className="text-sm text-gray-400 space-y-1 mb-4">
                 <p>Tags: {formatTags(sound.tags)}</p>
                 {sound.bpm && <p>BPM: {sound.bpm}</p>}

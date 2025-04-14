@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { RequestCookies } from 'next/dist/server/web/spec-extension/cookies';
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 export async function POST(request: Request) {
   try {
@@ -28,11 +26,6 @@ export async function POST(request: Request) {
     
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check admin access
-    if (user.email !== ADMIN_EMAIL) {
-      return NextResponse.json({ error: 'Admin access only' }, { status: 403 });
     }
 
     // Parse request body
@@ -81,11 +74,6 @@ export async function GET() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check admin access
-    if (user.email !== ADMIN_EMAIL) {
-      return NextResponse.json({ error: 'Admin access only' }, { status: 403 });
     }
 
     // Get libraries
