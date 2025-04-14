@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, Trash2 } from 'lucide-react';
+import { getAudioSource } from '@/utils/audio';
 
 interface Sound {
   id: string;
@@ -174,7 +175,7 @@ export default function LibraryPage() {
                   controls 
                   className="w-full [&::-webkit-media-controls-panel]:bg-gray-50"
                 >
-                  <source src={sound.url} type="audio/mpeg" />
+                  <source src={getAudioSource(sound.url)} type="audio/mpeg" />
                   Your browser does not support the audio element.
                 </audio>
               </div>

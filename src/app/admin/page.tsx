@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { getAudioSource } from '@/utils/audio';
 
 interface Sound {
   id: string;
@@ -184,7 +185,7 @@ export default function AdminPage() {
                     Tags: {Array.isArray(sound.tags) ? sound.tags.join(', ') : 'No tags'}
                   </p>
                   <audio controls className="mt-2">
-                    <source src={sound.url} type="audio/mpeg" />
+                    <source src={getAudioSource(sound.url)} type="audio/mpeg" />
                     Your browser does not support the audio element.
                   </audio>
                 </div>
