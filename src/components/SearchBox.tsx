@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { toast } from 'react-hot-toast';
+import { Settings, Send } from 'lucide-react';
 import { getAudioSource } from '@/utils/audio';
+import KeySelector from './KeySelector';
 
 interface Sound {
   id: string;
@@ -15,10 +17,10 @@ interface Sound {
 }
 
 export default function SearchBox() {
-  const [query, setQuery] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
   const [bpm, setBpm] = useState<string>('');
   const [key, setKey] = useState<string>('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [query, setQuery] = useState('');
   const [results, setResults] = useState<Sound[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,8 +50,8 @@ export default function SearchBox() {
     return 'No tags';
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!query.trim() && !bpm && !key) return;
 
     setLoading(true);
@@ -103,8 +105,19 @@ export default function SearchBox() {
     }
   };
 
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handleSearch();
+      }
+    };
+
+    window.addEventListener('keypress', handleKeyPress);
+    return () => window.removeEventListener('keypress', handleKeyPress);
+  }, [query, bpm, key]);
+
   return (
-    <div className="max-w-2xl mx-auto p-4 bg-[#1C1C1E]">
+    <div className="max-w-2xl mx-auto p-4">
       <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text">
         Find your perfect sound
       </h2>
@@ -112,85 +125,63 @@ export default function SearchBox() {
         Search through our curated collection of sounds based on your project's needs
       </p>
 
-      <form onSubmit={handleSearch} className="mb-8 space-y-4">
-        <div className="flex gap-2">
+      <div className={`bg-[#1a1a1a] rounded-2xl shadow-lg border border-gray-800 transition-all duration-200 ${isExpanded ? 'h-[120px]' : 'h-[60px]'}`}>
+        <div className="flex items-center gap-2 px-6 h-[60px]">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="e.g. find a sound that resembles street lights at night"
-            className="flex-1 p-3 rounded-lg bg-[#2C2C2E] text-white placeholder:italic placeholder:text-gray-500 border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50 shadow-lg"
+            className="flex-1 bg-transparent text-base text-gray-100 placeholder-gray-500 outline-none"
           />
           <button
-            type="submit"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-2 text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={handleSearch}
             disabled={loading}
-            className="px-6 py-3 bg-[#8B5CF6] text-white rounded-lg hover:bg-purple-600 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors duration-200 shadow-lg shadow-purple-500/20"
+            className={`p-2 text-gray-400 hover:text-gray-200 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {loading ? 'Searching...' : 'Search'}
+            <Send className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1 transition-colors duration-200"
-          >
-            <span>{showAdvanced ? 'Hide Advanced Search' : 'Show Advanced Search'}</span>
-            <svg 
-              className={`w-4 h-4 transform transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`}
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        </div>
-
-        {showAdvanced && (
-          <div className="grid grid-cols-2 gap-4 p-6 bg-[#2C2C2E] rounded-lg shadow-xl">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                BPM
-              </label>
-              <input
-                type="number"
-                value={bpm}
-                onChange={(e) => setBpm(e.target.value)}
-                placeholder="Enter BPM..."
-                className="w-full p-3 rounded-lg bg-[#3C3C3E] text-white placeholder:text-gray-500 border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                min="0"
-                max="300"
-              />
+        <div className={`px-6 pb-6 transition-opacity duration-200 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex items-center gap-8">
+            <div className="flex-1 flex items-center gap-4">
+              <span className="text-sm font-medium text-gray-300">BPM</span>
+              <div className="flex-1">
+                <input
+                  type="number"
+                  value={bpm}
+                  onChange={(e) => setBpm(e.target.value)}
+                  placeholder="Enter BPM..."
+                  className="w-full p-2 bg-[#2C2C2E] text-white rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  min="0"
+                  max="300"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Key
-              </label>
-              <select
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                className="w-full p-3 rounded-lg bg-[#3C3C3E] text-white border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-              >
-                <option value="">Select key...</option>
-                {musicalKeys.map((k) => (
-                  <option key={k} value={k}>{k}</option>
-                ))}
-              </select>
+
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-gray-300">Key</span>
+              <KeySelector value={key} onChange={setKey} />
             </div>
           </div>
-        )}
-      </form>
+        </div>
+      </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-900/20 border border-red-500/20 text-red-400 rounded-lg">
+        <div className="mt-4 p-4 bg-red-900/20 border border-red-500/20 text-red-400 rounded-lg">
           {error}
         </div>
       )}
 
       {saveError && (
-        <div className={`mb-6 p-4 rounded-lg ${
+        <div className={`mt-4 p-4 rounded-lg ${
           saveError.includes('successfully') 
             ? 'bg-green-900/20 border border-green-500/20 text-green-400'
             : 'bg-red-900/20 border border-red-500/20 text-red-400'
@@ -199,11 +190,25 @@ export default function SearchBox() {
         </div>
       )}
 
+      {loading && (
+        <div className="mt-4 p-4">
+          <div className="animate-pulse flex space-x-4">
+            <div className="flex-1 space-y-4 py-1">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {results.length > 0 ? (
-        <div className="space-y-6">
+        <div className="mt-4 space-y-4">
           {results.map((sound) => (
-            <div key={sound.id} className="bg-[#2C2C2E] p-6 rounded-lg shadow-xl">
-              <div className="flex justify-between items-start mb-2">
+            <div key={sound.id} className="bg-[#1a1a1a] rounded-2xl p-4 flex flex-col gap-3 border border-gray-800">
+              <div className="flex justify-between items-start">
                 <h3 className="text-xl font-semibold text-white">{sound.name}</h3>
                 <button
                   onClick={() => handleSaveSound(sound.id)}
@@ -213,7 +218,7 @@ export default function SearchBox() {
                   {savingSound === sound.id ? 'Saving...' : 'Save to Library'}
                 </button>
               </div>
-              <div className="text-sm text-gray-400 space-y-1 mb-4">
+              <div className="text-sm text-gray-400 space-y-1">
                 <p>Tags: {formatTags(sound.tags)}</p>
                 {sound.bpm && <p>BPM: {sound.bpm}</p>}
                 {sound.key && <p>Key: {sound.key}</p>}
@@ -230,7 +235,7 @@ export default function SearchBox() {
         </div>
       ) : (
         !loading && (query || bpm || key) && (
-          <div className="text-center text-purple-400/80 p-8">
+          <div className="mt-4 text-center text-purple-400/80 p-8">
             We're working on adding more sounds. In the meantime, try another search.
           </div>
         )
