@@ -3,19 +3,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-const MUSICAL_KEYS = [
-  'C', 'C#', 'D', 'D#', 'E', 'F', 
-  'F#', 'G', 'G#', 'A', 'A#', 'B'
-];
-
 interface KeySelectorProps {
   value: string;
-  onChange: (key: string) => void;
+  onChange: (value: string) => void;
 }
 
 export default function KeySelector({ value, onChange }: KeySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const musicalKeys = [
+    'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+    'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'
+  ];
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -41,20 +41,16 @@ export default function KeySelector({ value, onChange }: KeySelectorProps) {
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-24 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
           <div className="max-h-[160px] overflow-y-auto py-2">
-            {MUSICAL_KEYS.map((key) => (
-              <button
-                key={key}
-                onClick={() => {
-                  onChange(key);
-                  setIsOpen(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors cursor-pointer ${
-                  key === value ? 'text-blue-500 font-medium' : 'text-gray-600'
-                }`}
-              >
-                {key}
-              </button>
-            ))}
+            <select
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              className="p-2 bg-[#2C2C2E] text-white rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            >
+              <option value="">Select key...</option>
+              {musicalKeys.map((key) => (
+                <option key={key} value={key}>{key}</option>
+              ))}
+            </select>
           </div>
         </div>
       )}
