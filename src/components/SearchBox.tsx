@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { toast } from 'react-hot-toast';
+import { getAudioSource } from '@/utils/audio';
 
 interface Sound {
   id: string;
@@ -221,7 +222,7 @@ export default function SearchBox() {
                 controls 
                 className="w-full [&::-webkit-media-controls-panel]:bg-[#3C3C3E] [&::-webkit-media-controls-current-time-display]:text-white [&::-webkit-media-controls-time-remaining-display]:text-white"
               >
-                <source src={sound.url} type="audio/mpeg" />
+                <source src={getAudioSource(sound.url)} type="audio/mpeg" />
                 Your browser does not support the audio element.
               </audio>
             </div>
