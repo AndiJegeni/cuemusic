@@ -3,18 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 139, 92, 246;
-  --background-rgb: 18, 18, 20;
-  --purple-accent: 139, 92, 246;
-  --purple-light: 167, 139, 250;
-  --surface-1: 28, 28, 30;
-  --surface-2: 44, 44, 46;
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 267 100% 60%;
+  --primary-foreground: 0 0% 100%;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
   body {
-    background: rgb(var(--background-rgb));
-    color: rgb(var(--foreground-rgb));
+    @apply bg-background text-foreground;
   }
 
   /* Custom scrollbar */
@@ -24,16 +33,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: rgb(var(--surface-1));
+    background: #1a1a1a;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgb(var(--purple-accent));
+    background: #2c2c2e;
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--purple-light));
+    background: #3c3c3e;
   }
 
   /* Form elements */
@@ -53,6 +62,21 @@
   /* Links */
   a {
     @apply text-purple-400 hover:text-purple-300 transition-colors duration-200;
+  }
+
+  /* Audio player styles */
+  audio::-webkit-media-controls-panel {
+    background-color: #2c2c2e !important;
+  }
+
+  audio::-webkit-media-controls-current-time-display,
+  audio::-webkit-media-controls-time-remaining-display {
+    color: white !important;
+  }
+
+  audio::-webkit-media-controls-play-button,
+  audio::-webkit-media-controls-mute-button {
+    filter: invert(1);
   }
 }
 

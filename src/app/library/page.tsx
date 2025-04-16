@@ -1,28 +1,28 @@
 'use client';
 
+import Layout from '@/components/layout/Layout';
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import { Search, Plus, Trash2 as TrashIcon } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { TrashIcon } from 'lucide-react';
 import { getAudioSource } from '@/utils/audio';
 
 interface Sound {
   id: string;
   name: string;
   url: string;
-  description?: string;
-  tags: string[];
   bpm?: number;
   key?: string;
-  createdAt: string;
+  created_at: string;
 }
 
-export default function LibraryPage() {
+export default function Library() {
+  const router = useRouter();
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const router = useRouter();
+  const [deletingSound, setDeletingSound] = useState<string | null>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,27 +30,28 @@ export default function LibraryPage() {
   );
 
   useEffect(() => {
-    fetchSounds();
-  }, [router, supabase.auth]);
-
-  const fetchSounds = async () => {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         router.push('/signin');
         return;
       }
+      fetchSounds();
+    };
 
+    checkAuth();
+  }, [supabase.auth, router]);
+
+  const fetchSounds = async () => {
+    try {
       const response = await fetch('/api/sounds');
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch sounds');
+        throw new Error('Failed to fetch sounds');
       }
-
       const data = await response.json();
       setSounds(data);
     } catch (err) {
-      console.error('Error fetching sounds:', err);
+      console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch sounds');
     } finally {
       setLoading(false);
@@ -59,6 +60,7 @@ export default function LibraryPage() {
 
   const handleDelete = async (soundId: string) => {
     try {
+      setDeletingSound(soundId);
       const response = await fetch(`/api/sounds/${soundId}`, {
         method: 'DELETE',
       });
@@ -67,122 +69,81 @@ export default function LibraryPage() {
         throw new Error('Failed to delete sound');
       }
 
-      setSounds(prevSounds => prevSounds.filter(sound => sound.id !== soundId));
-    } catch (err) {
-      console.error('Error deleting sound:', err);
+      setSounds(sounds.filter(sound => sound.id !== soundId));
+      toast.success('Sound deleted successfully');
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete sound');
+    } finally {
+      setDeletingSound(null);
     }
   };
 
-  const filteredSounds = sounds.filter(sound => 
-    sound.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (Array.isArray(sound.tags) && sound.tags.some(tag => 
-      tag.toLowerCase().includes(searchQuery.toLowerCase())
-    ))
-  );
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] p-8">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-medium text-gray-900 mb-6">Loading sounds...</h2>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {error}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Sound Library</h1>
-          <p className="text-gray-600">Manage and organize your sound collection.</p>
-        </div>
+    <Layout>
+      <div className="min-h-screen bg-[#000000] text-white">
+        <div className="container mx-auto px-4 py-8">
+          <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text">
+            Your Library
+          </h2>
+          <p className="text-gray-400 mb-8">
+            Manage your saved sounds and create new melodies
+          </p>
 
-        <div className="flex justify-between items-center mb-8">
-          <div className="relative w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              placeholder="Search sounds..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            Add New Sound
-          </button>
-        </div>
-        
-        {filteredSounds.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredSounds.map((sound) => (
-              <div key={sound.id} className="relative bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{sound.name}</h3>
-                    {sound.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{sound.description}</p>
-                    )}
+          {error && (
+            <div className="mt-4 p-4 bg-red-900/20 border border-red-500/20 text-red-400 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="mt-4 p-4">
+              <div className="animate-pulse flex space-x-4">
+                <div className="flex-1 space-y-4 py-1">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
                   </div>
-                  <button
-                    onClick={() => handleDelete(sound.id)}
-                    className="text-red-500 hover:text-red-700 transition-colors"
-                  >
-                    <TrashIcon className="h-5 w-5" />
-                  </button>
                 </div>
-                
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {sound.tags?.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  {sound.bpm && <span>BPM: {sound.bpm}</span>}
-                  {sound.key && <span>Key: {sound.key}</span>}
-                  <span>Added: {new Date(sound.createdAt).toLocaleDateString()}</span>
-                </div>
-
-                <audio
-                  controls
-                  src={getAudioSource(sound.url)}
-                  className="w-full"
-                />
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-            <p className="text-gray-600">
-              {searchQuery ? 'No sounds match your search.' : 'Your collection is empty. Add some sounds to get started.'}
-            </p>
-          </div>
-        )}
+            </div>
+          ) : sounds.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4">
+              {sounds.map((sound) => (
+                <div key={sound.id} className="bg-[#1a1a1a] rounded-2xl p-4 flex flex-col gap-3 border border-gray-800">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-xl font-semibold text-white">{sound.name}</h3>
+                    <button
+                      onClick={() => handleDelete(sound.id)}
+                      disabled={deletingSound === sound.id}
+                      className="p-2 hover:bg-[#2C2C2E] rounded-lg transition-colors text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div className="text-sm text-gray-400 space-y-1">
+                    {sound.bpm && <p>BPM: {sound.bpm}</p>}
+                    {sound.key && <p>Key: {sound.key}</p>}
+                    <p>Added: {new Date(sound.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <audio 
+                    controls 
+                    className="w-full [&::-webkit-media-controls-panel]:bg-[#3C3C3E] [&::-webkit-media-controls-current-time-display]:text-white [&::-webkit-media-controls-time-remaining-display]:text-white"
+                  >
+                    <source src={getAudioSource(sound.url)} type="audio/mpeg" />
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-purple-400/80 p-8">
+              Your library is empty. Start by searching and saving some sounds!
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }

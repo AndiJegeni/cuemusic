@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface KeySelectorProps {
   value: string;
@@ -32,25 +33,35 @@ export default function KeySelector({ value, onChange }: KeySelectorProps) {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-transparent text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
+          "bg-[#2C2C2E] text-white hover:bg-[#3C3C3E]",
+          "focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+        )}
       >
-        {value}
-        <ChevronDown className="w-4 h-4" />
+        <span className="text-sm font-medium">{value || 'Select key...'}</span>
+        <ChevronDown className={cn("w-4 h-4 transition-transform", isOpen && "rotate-180")} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-24 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
-          <div className="max-h-[160px] overflow-y-auto py-2">
-            <select
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              className="p-2 bg-[#2C2C2E] text-white rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-            >
-              <option value="">Select key...</option>
-              {musicalKeys.map((key) => (
-                <option key={key} value={key}>{key}</option>
-              ))}
-            </select>
+        <div className="absolute right-0 top-full mt-2 w-32 bg-[#1A1A1A] rounded-xl shadow-lg border border-zinc-700 z-50 overflow-hidden">
+          <div className="max-h-[240px] overflow-y-auto py-2">
+            {musicalKeys.map((key) => (
+              <button
+                key={key}
+                onClick={() => {
+                  onChange(key);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "w-full px-3 py-2 text-left text-sm transition-colors",
+                  "hover:bg-[#2C2C2E] text-white",
+                  value === key && "bg-purple-600/20 text-purple-400"
+                )}
+              >
+                {key}
+              </button>
+            ))}
           </div>
         </div>
       )}

@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { toast } from 'react-hot-toast';
-import { Settings, Send } from 'lucide-react';
+import { Settings, Send, Search } from 'lucide-react';
 import { getAudioSource } from '@/utils/audio';
 import KeySelector from './KeySelector';
+import { cn } from '@/lib/utils';
 
 interface Sound {
   id: string;
@@ -25,30 +26,6 @@ export default function SearchBox() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingSound, setSavingSound] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  // Musical keys for dropdown
-  const musicalKeys = [
-    'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
-    'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'
-  ];
-
-  // Helper function to format tags for display
-  const formatTags = (tags: string[] | string | null): string => {
-    if (!tags) return 'No tags';
-    if (typeof tags === 'string') {
-      return tags.split(',').map(tag => tag.trim()).join(', ');
-    }
-    if (Array.isArray(tags)) {
-      return tags.join(', ');
-    }
-    return 'No tags';
-  };
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -79,15 +56,21 @@ export default function SearchBox() {
     }
   };
 
-  const handleSaveSound = async (soundId: string) => {
+  const handleSaveSound = async (sound: Sound) => {
     try {
-      setSavingSound(soundId);
+      setSavingSound(sound.id);
       const response = await fetch('/api/sounds', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ soundId }),
+        body: JSON.stringify({
+          name: sound.name,
+          url: sound.url,
+          tags: Array.isArray(sound.tags) ? sound.tags : sound.tags?.split(',').map(t => t.trim()) || [],
+          bpm: sound.bpm,
+          key: sound.key
+        }),
       });
 
       const data = await response.json();
@@ -117,61 +100,68 @@ export default function SearchBox() {
   }, [query, bpm, key]);
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
+    <div className="max-w-2xl mx-auto">
       <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text">
         Find your perfect sound
       </h2>
       <p className="text-gray-400 mb-8">
-        Search through our curated collection of sounds based on your project's needs
+        Search the vibe not the tag
       </p>
 
-      <div className={`bg-[#1a1a1a] rounded-2xl shadow-lg border border-gray-800 transition-all duration-200 ${isExpanded ? 'h-[120px]' : 'h-[60px]'}`}>
-        <div className="flex items-center gap-2 px-6 h-[60px]">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. find a sound that resembles street lights at night"
-            className="flex-1 bg-transparent text-base text-gray-100 placeholder-gray-500 outline-none"
-          />
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-2 text-gray-400 hover:text-gray-200 transition-colors"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-          <button 
-            onClick={handleSearch}
-            disabled={loading}
-            className={`p-2 text-gray-400 hover:text-gray-200 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className={`px-6 pb-6 transition-opacity duration-200 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex items-center gap-8">
-            <div className="flex-1 flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-300">BPM</span>
-              <div className="flex-1">
-                <input
-                  type="number"
-                  value={bpm}
-                  onChange={(e) => setBpm(e.target.value)}
-                  placeholder="Enter BPM..."
-                  className="w-full p-2 bg-[#2C2C2E] text-white rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  min="0"
-                  max="300"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-300">Key</span>
-              <KeySelector value={key} onChange={setKey} />
+      <div className="relative w-full">
+        <div className="rounded-xl border border-zinc-700 shadow-lg bg-[#1A1A1A]">
+          <div className="relative flex items-center">
+            <Search className="absolute left-4 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              className="w-full bg-transparent text-foreground rounded-xl h-[52px] pl-12 pr-24 placeholder:text-muted-foreground focus:outline-none"
+              placeholder="Find a sound that resembles street lights at night..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <div className="absolute right-3 flex gap-2">
+              <button 
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={handleSearch}
+                disabled={loading}
+                className="bg-purple-600 hover:bg-purple-700 transition-colors p-2 rounded-full text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
+
+        {isExpanded && (
+          <div className="absolute w-full mt-2 p-4 bg-[#1A1A1A] rounded-xl border border-zinc-700 z-10">
+            <div className="flex items-center gap-8">
+              <div className="flex-1 flex items-center gap-4">
+                <span className="text-sm font-medium text-gray-300">BPM</span>
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    value={bpm}
+                    onChange={(e) => setBpm(e.target.value)}
+                    placeholder="Enter BPM..."
+                    className="w-full p-2 bg-[#2C2C2E] text-white rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    min="0"
+                    max="300"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-gray-300">Key</span>
+                <KeySelector value={key} onChange={setKey} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -180,17 +170,7 @@ export default function SearchBox() {
         </div>
       )}
 
-      {saveError && (
-        <div className={`mt-4 p-4 rounded-lg ${
-          saveError.includes('successfully') 
-            ? 'bg-green-900/20 border border-green-500/20 text-green-400'
-            : 'bg-red-900/20 border border-red-500/20 text-red-400'
-        }`}>
-          {saveError}
-        </div>
-      )}
-
-      {loading && (
+      {loading ? (
         <div className="mt-4 p-4">
           <div className="animate-pulse flex space-x-4">
             <div className="flex-1 space-y-4 py-1">
@@ -202,16 +182,14 @@ export default function SearchBox() {
             </div>
           </div>
         </div>
-      )}
-
-      {results.length > 0 ? (
+      ) : results.length > 0 ? (
         <div className="mt-4 space-y-4">
           {results.map((sound) => (
             <div key={sound.id} className="bg-[#1a1a1a] rounded-2xl p-4 flex flex-col gap-3 border border-gray-800">
               <div className="flex justify-between items-start">
                 <h3 className="text-xl font-semibold text-white">{sound.name}</h3>
                 <button
-                  onClick={() => handleSaveSound(sound.id)}
+                  onClick={() => handleSaveSound(sound)}
                   disabled={savingSound === sound.id}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors duration-200"
                 >
@@ -219,7 +197,6 @@ export default function SearchBox() {
                 </button>
               </div>
               <div className="text-sm text-gray-400 space-y-1">
-                <p>Tags: {formatTags(sound.tags)}</p>
                 {sound.bpm && <p>BPM: {sound.bpm}</p>}
                 {sound.key && <p>Key: {sound.key}</p>}
               </div>
