@@ -13,7 +13,7 @@ interface Sound {
   name: string;
   url: string;
   description?: string;
-  tags: string[];
+  tags?: string[] | null;
   bpm?: number;
   key?: string;
   createdAt: string;
@@ -119,7 +119,18 @@ export default function Library() {
               {sounds.map((sound) => (
                 <div key={sound.id} className="bg-[#1a1a1a] rounded-2xl p-4 flex flex-col gap-3 border border-gray-800">
                   <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-semibold text-white">{sound.name}</h3>
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">{sound.name}</h3>
+                      {sound.tags && sound.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {sound.tags.map((tag, index) => (
+                            <span key={index} className="text-xs bg-purple-600/20 text-purple-400 px-2 py-1 rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
                       onClick={() => handleDelete(sound.id)}
                       disabled={deletingSound === sound.id}

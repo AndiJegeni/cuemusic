@@ -7,7 +7,7 @@ interface Sound {
   name: string;
   audio_url: string;
   description?: string;
-  tags: string[];
+  tags?: string[] | null;
   bpm?: number;
   key?: string;
   library_id: string;
@@ -110,7 +110,7 @@ export async function GET(request: Request) {
       name: sound.name,
       url: sound.audio_url,
       description: sound.description,
-      tags: Array.isArray(sound.tags) ? sound.tags : [],
+      tags: sound.tags || [],
       bpm: sound.bpm,
       key: sound.key,
       createdAt: sound.created_at
