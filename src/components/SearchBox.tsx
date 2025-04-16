@@ -135,7 +135,7 @@ export default function SearchBox() {
     <div className="w-full max-w-3xl mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-white mb-4">Find your perfect sound</h1>
-        <p className="text-gray-400">Search for sounds by description, BPM, or key</p>
+        <p className="text-gray-400">Search by vibe, not tags</p>
       </div>
       <div className="relative w-full">
         <div className="rounded-xl border border-zinc-700 shadow-lg bg-[#1A1A1A]">
