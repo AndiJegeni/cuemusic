@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
 
   // If the user is not signed in and the current path is not /signin
   // redirect the user to /signin
-  if (!session && request.nextUrl.pathname !== '/signin') {
+  if (!session && request.nextUrl.pathname !== '/signin' && !request.nextUrl.pathname.startsWith('/auth/')) {
     return NextResponse.redirect(new URL('/signin', request.url));
   }
 
@@ -59,10 +59,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - signin (sign in page)
+     * - public (public files)
      * - api (API routes)
      * - auth (auth callback routes)
      */
-    '/((?!_next/static|_next/image|favicon.ico|signin|api|auth).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public|api|auth).*)',
   ],
 }; 
