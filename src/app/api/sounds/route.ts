@@ -10,7 +10,7 @@ interface Sound {
   tags: string[];
   bpm?: number;
   key?: string;
-  user_id: string;
+  library_id: string;
   created_at: string;
 }
 
@@ -35,10 +35,27 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // First get the user's library
+    const { data: library, error: libraryError } = await supabase
+      .from('sound_libraries')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (libraryError) {
+      console.error('Library error:', libraryError);
+      return NextResponse.json({ error: 'Failed to fetch library' }, { status: 500 });
+    }
+
+    if (!library) {
+      return NextResponse.json([]);
+    }
+
+    // Then get sounds from that library
     const { data: sounds, error } = await supabase
       .from('sounds')
       .select('*')
-      .eq('user_id', session.user.id);
+      .eq('library_id', library.id);
 
     if (error) {
       console.error('Supabase error:', error);
@@ -92,6 +109,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // First get the user's library
+    const { data: library, error: libraryError } = await supabase
+      .from('sound_libraries')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (libraryError) {
+      console.error('Library error:', libraryError);
+      return NextResponse.json({ error: 'Failed to fetch library' }, { status: 500 });
+    }
+
+    if (!library) {
+      return NextResponse.json({ error: 'No library found' }, { status: 404 });
+    }
+
     const body = await request.json();
     const { name, url, tags, bpm, key } = body;
 
@@ -102,7 +135,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Add sound to user's collection
+    // Add sound to user's library
     const { data: newSound, error: insertError } = await supabase
       .from('sounds')
       .insert([
@@ -112,7 +145,7 @@ export async function POST(request: Request) {
           tags: Array.isArray(tags) ? tags : [],
           bpm,
           key,
-          user_id: session.user.id
+          library_id: library.id
         }
       ])
       .select()
