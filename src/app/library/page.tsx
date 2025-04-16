@@ -5,16 +5,18 @@ import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { TrashIcon } from 'lucide-react';
+import { Trash2 as TrashIcon } from 'lucide-react';
 import { getAudioSource } from '@/utils/audio';
 
 interface Sound {
   id: string;
   name: string;
   url: string;
+  description?: string;
+  tags: string[];
   bpm?: number;
   key?: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export default function Library() {
@@ -44,9 +46,12 @@ export default function Library() {
 
   const fetchSounds = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await fetch('/api/sounds');
       if (!response.ok) {
-        throw new Error('Failed to fetch sounds');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to fetch sounds');
       }
       const data = await response.json();
       setSounds(data);
@@ -66,7 +71,8 @@ export default function Library() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete sound');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete sound');
       }
 
       setSounds(sounds.filter(sound => sound.id !== soundId));
@@ -100,10 +106,10 @@ export default function Library() {
             <div className="mt-4 p-4">
               <div className="animate-pulse flex space-x-4">
                 <div className="flex-1 space-y-4 py-1">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-700/50 rounded w-3/4"></div>
                   <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded"></div>
-                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    <div className="h-4 bg-gray-700/50 rounded"></div>
+                    <div className="h-4 bg-gray-700/50 rounded w-5/6"></div>
                   </div>
                 </div>
               </div>
@@ -125,7 +131,7 @@ export default function Library() {
                   <div className="text-sm text-gray-400 space-y-1">
                     {sound.bpm && <p>BPM: {sound.bpm}</p>}
                     {sound.key && <p>Key: {sound.key}</p>}
-                    <p>Added: {new Date(sound.created_at).toLocaleDateString()}</p>
+                    <p>Added: {new Date(sound.createdAt).toLocaleDateString()}</p>
                   </div>
                   <audio 
                     controls 
@@ -138,8 +144,11 @@ export default function Library() {
               ))}
             </div>
           ) : (
-            <div className="text-center text-purple-400/80 p-8">
-              Your library is empty. Start by searching and saving some sounds!
+            <div className="mt-8 text-center">
+              <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-gray-800">
+                <p className="text-purple-400/80 mb-4">Your library is empty</p>
+                <p className="text-gray-400 text-sm">Start by searching and saving some sounds!</p>
+              </div>
             </div>
           )}
         </div>

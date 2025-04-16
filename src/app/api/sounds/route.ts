@@ -35,39 +35,50 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // First get the user's library
-    const { data: library, error: libraryError } = await supabase
+    // First get or create the user's library
+    let { data: library, error: libraryError } = await supabase
       .from('sound_libraries')
       .select('id')
       .eq('user_id', session.user.id)
       .single();
 
-    if (libraryError) {
+    if (libraryError && libraryError.code === 'PGRST116') {
+      // Library doesn't exist, create it
+      const { data: newLibrary, error: createError } = await supabase
+        .from('sound_libraries')
+        .insert([{ user_id: session.user.id }])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Create library error:', createError);
+        return NextResponse.json({ error: 'Failed to create library' }, { status: 500 });
+      }
+
+      library = newLibrary;
+    } else if (libraryError) {
       console.error('Library error:', libraryError);
       return NextResponse.json({ error: 'Failed to fetch library' }, { status: 500 });
     }
 
     if (!library) {
-      return NextResponse.json([]);
+      return NextResponse.json({ error: 'No library found' }, { status: 404 });
     }
 
     // Then get sounds from that library
     const { data: sounds, error } = await supabase
       .from('sounds')
       .select('*')
-      .eq('library_id', library.id);
+      .eq('library_id', library.id)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (!sounds) {
-      return NextResponse.json([]);
-    }
-
     // Transform the data to match the client-side interface
-    const transformedSounds = sounds.map((sound: Sound) => ({
+    const transformedSounds = (sounds || []).map((sound: Sound) => ({
       id: sound.id,
       name: sound.name,
       url: sound.audio_url,
@@ -82,7 +93,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error fetching sounds:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch sounds' },
+      { error: 'Failed to fetch sounds', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -109,14 +120,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // First get the user's library
-    const { data: library, error: libraryError } = await supabase
+    // First get or create the user's library
+    let { data: library, error: libraryError } = await supabase
       .from('sound_libraries')
       .select('id')
       .eq('user_id', session.user.id)
       .single();
 
-    if (libraryError) {
+    if (libraryError && libraryError.code === 'PGRST116') {
+      // Library doesn't exist, create it
+      const { data: newLibrary, error: createError } = await supabase
+        .from('sound_libraries')
+        .insert([{ user_id: session.user.id }])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Create library error:', createError);
+        return NextResponse.json({ error: 'Failed to create library' }, { status: 500 });
+      }
+
+      library = newLibrary;
+    } else if (libraryError) {
       console.error('Library error:', libraryError);
       return NextResponse.json({ error: 'Failed to fetch library' }, { status: 500 });
     }
@@ -163,7 +188,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error saving sound:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to save sound', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
