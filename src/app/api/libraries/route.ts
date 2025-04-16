@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { prisma } from '@/lib/prisma';
 import { RequestCookies } from 'next/dist/server/web/spec-extension/cookies';
 
 export async function POST(request: Request) {
@@ -22,9 +21,9 @@ export async function POST(request: Request) {
     );
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (authError || !user) {
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -36,12 +35,20 @@ export async function POST(request: Request) {
     }
 
     // Create library
-    const library = await prisma.soundLibrary.create({
-      data: {
-        name,
-        userId: user.id,
-      },
-    });
+    const { data: library, error } = await supabase
+      .from('libraries')
+      .insert([
+        {
+          name,
+          user_id: session.user.id,
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json(library);
   } catch (error) {
@@ -71,16 +78,21 @@ export async function GET() {
     );
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get libraries
-    const libraries = await prisma.soundLibrary.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { data: libraries, error } = await supabase
+      .from('libraries')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json(libraries);
   } catch (error) {
