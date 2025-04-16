@@ -133,10 +133,15 @@ export default function SearchBox() {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-white mb-4">Find your perfect sound</h1>
+        <p className="text-gray-400">Search for sounds by description, BPM, or key</p>
+      </div>
       <div className="relative w-full">
         <div className="rounded-xl border border-zinc-700 shadow-lg bg-[#1A1A1A]">
           <div className="relative flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-gray-400" />
               <textarea
                 className={cn(
                   "flex min-h-[60px] w-full rounded-md bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none",
