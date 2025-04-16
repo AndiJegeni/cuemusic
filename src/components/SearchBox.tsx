@@ -244,6 +244,10 @@ export default function SearchBox() {
             </div>
           ))}
         </div>
+      ) : query.trim() ? (
+        <div className="mt-8 text-center max-w-xl mx-auto">
+          <p className="text-gray-400">We are working on adding more sounds. Until then, can you try another query?</p>
+        </div>
       ) : null}
     </div>
   );
