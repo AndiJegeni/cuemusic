@@ -1,12 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
 interface Sound {
   id: string;
   name: string;
-  audioUrl: string;
+  audio_url: string;
   description?: string;
   tags: { name: string }[];
   bpm?: number;
@@ -47,7 +46,7 @@ export async function GET(request: Request) {
     const transformedSounds = sounds.map((sound: Sound) => ({
       id: sound.id,
       name: sound.name,
-      url: sound.audioUrl,
+      url: sound.audio_url,
       description: sound.description,
       tags: sound.tags.map(tag => tag.name),
       bpm: sound.bpm,
@@ -101,14 +100,14 @@ export async function POST(request: Request) {
       .eq('id', soundId)
       .single();
 
-    if (soundError || !sound) {
+    if (soundError) {
       return NextResponse.json(
-        { error: 'Sound not found', details: soundError?.message },
+        { error: 'Sound not found', details: soundError.message },
         { status: 404 }
       );
     }
 
-    // Check if sound already exists
+    // Check if sound already exists in user's collection
     const { data: existingSound, error: existingError } = await supabase
       .from('sounds')
       .select('*')
@@ -142,6 +141,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error saving sound:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
