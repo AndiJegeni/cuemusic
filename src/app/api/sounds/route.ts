@@ -42,30 +42,52 @@ export async function GET(request: Request) {
       .eq('user_id', session.user.id)
       .single();
 
-    if (libraryError && libraryError.code === 'PGRST116') {
-      // Library doesn't exist, create it
-      const { data: newLibrary, error: createError } = await supabase
-        .from('sound_libraries')
-        .insert([{ 
-          user_id: session.user.id,
-          name: 'My Library' // Default name for the library
-        }])
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('Create library error:', createError);
-        return NextResponse.json({ error: 'Failed to create library' }, { status: 500 });
-      }
-
-      library = newLibrary;
-    } else if (libraryError) {
+    if (libraryError) {
       console.error('Library error:', libraryError);
-      return NextResponse.json({ error: 'Failed to fetch library' }, { status: 500 });
+      if (libraryError.code === 'PGRST116') {
+        // Library doesn't exist, create it
+        const { data: newLibrary, error: createError } = await supabase
+          .from('sound_libraries')
+          .insert([{ 
+            user_id: session.user.id,
+            name: 'My Library'
+          }])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Create library error:', createError);
+          return NextResponse.json({ 
+            error: 'Failed to create library', 
+            details: createError.message,
+            code: createError.code 
+          }, { status: 500 });
+        }
+
+        if (!newLibrary) {
+          console.error('No library returned after creation');
+          return NextResponse.json({ 
+            error: 'Failed to create library', 
+            details: 'No library data returned after creation'
+          }, { status: 500 });
+        }
+
+        library = newLibrary;
+      } else {
+        return NextResponse.json({ 
+          error: 'Failed to fetch library', 
+          details: libraryError.message,
+          code: libraryError.code 
+        }, { status: 500 });
+      }
     }
 
     if (!library) {
-      return NextResponse.json({ error: 'No library found' }, { status: 404 });
+      console.error('No library found after all attempts');
+      return NextResponse.json({ 
+        error: 'No library found', 
+        details: 'Library not found after creation attempt'
+      }, { status: 404 });
     }
 
     // Then get sounds from that library
@@ -130,30 +152,52 @@ export async function POST(request: Request) {
       .eq('user_id', session.user.id)
       .single();
 
-    if (libraryError && libraryError.code === 'PGRST116') {
-      // Library doesn't exist, create it
-      const { data: newLibrary, error: createError } = await supabase
-        .from('sound_libraries')
-        .insert([{ 
-          user_id: session.user.id,
-          name: 'My Library' // Default name for the library
-        }])
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('Create library error:', createError);
-        return NextResponse.json({ error: 'Failed to create library' }, { status: 500 });
-      }
-
-      library = newLibrary;
-    } else if (libraryError) {
+    if (libraryError) {
       console.error('Library error:', libraryError);
-      return NextResponse.json({ error: 'Failed to fetch library' }, { status: 500 });
+      if (libraryError.code === 'PGRST116') {
+        // Library doesn't exist, create it
+        const { data: newLibrary, error: createError } = await supabase
+          .from('sound_libraries')
+          .insert([{ 
+            user_id: session.user.id,
+            name: 'My Library'
+          }])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Create library error:', createError);
+          return NextResponse.json({ 
+            error: 'Failed to create library', 
+            details: createError.message,
+            code: createError.code 
+          }, { status: 500 });
+        }
+
+        if (!newLibrary) {
+          console.error('No library returned after creation');
+          return NextResponse.json({ 
+            error: 'Failed to create library', 
+            details: 'No library data returned after creation'
+          }, { status: 500 });
+        }
+
+        library = newLibrary;
+      } else {
+        return NextResponse.json({ 
+          error: 'Failed to fetch library', 
+          details: libraryError.message,
+          code: libraryError.code 
+        }, { status: 500 });
+      }
     }
 
     if (!library) {
-      return NextResponse.json({ error: 'No library found' }, { status: 404 });
+      console.error('No library found after all attempts');
+      return NextResponse.json({ 
+        error: 'No library found', 
+        details: 'Library not found after creation attempt'
+      }, { status: 404 });
     }
 
     const body = await request.json();

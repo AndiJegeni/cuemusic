@@ -96,13 +96,25 @@ export default function SearchBox() {
           router.push('/signin');
           throw new Error('Please sign in to save sounds');
         }
-        throw new Error(data.details || data.error || 'Failed to save sound');
+        
+        // Handle specific error cases
+        if (data.details) {
+          throw new Error(`${data.error}: ${data.details}`);
+        }
+        
+        throw new Error(data.error || 'Failed to save sound');
       }
 
       toast.success('Sound saved to library!');
     } catch (error) {
       console.error('Save error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save sound');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save sound';
+      toast.error(errorMessage);
+      
+      // If it's a library-related error, redirect to library page
+      if (errorMessage.includes('library')) {
+        router.push('/library');
+      }
     } finally {
       setSavingSound(null);
     }
