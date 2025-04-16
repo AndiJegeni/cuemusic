@@ -120,17 +120,6 @@ export default function SearchBox() {
     }
   };
 
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        handleSearch();
-      }
-    };
-
-    window.addEventListener('keypress', handleKeyPress);
-    return () => window.removeEventListener('keypress', handleKeyPress);
-  }, [query, bpm, key]);
-
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
       <h1 className="text-4xl font-bold text-purple-400 mb-2">Find your perfect sound</h1>
@@ -141,14 +130,21 @@ export default function SearchBox() {
           <div className="relative flex flex-col gap-2 p-2">
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5 text-gray-400 ml-3" />
-              <textarea
+              <input
+                type="text"
                 className={cn(
-                  "flex min-h-[48px] w-full rounded-md bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none",
+                  "flex h-10 w-full bg-transparent px-3 text-sm shadow-sm placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
                   "border-0 focus-visible:ring-0"
                 )}
                 placeholder="Find a sound that resembles street lights at night..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearch();
+                  }
+                }}
               />
               <div className="flex items-center gap-2 mr-2">
                 <button 
