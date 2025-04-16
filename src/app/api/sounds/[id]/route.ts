@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const cookieStore = await cookies();
@@ -30,7 +30,7 @@ export async function DELETE(
     // Verify the sound belongs to the user
     const sound = await prisma.sound.findFirst({
       where: {
-        id: params.id,
+        id: context.params.id,
         library: {
           userId: user.id
         }
@@ -47,7 +47,7 @@ export async function DELETE(
     // Delete the sound
     await prisma.sound.delete({
       where: {
-        id: params.id
+        id: context.params.id
       }
     });
 
