@@ -28,6 +28,7 @@ export default function SearchBox() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingSound, setSavingSound] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,6 +41,7 @@ export default function SearchBox() {
 
     setLoading(true);
     setError(null);
+    setHasSearched(true);
 
     try {
       const searchParams = new URLSearchParams();
@@ -240,7 +242,7 @@ export default function SearchBox() {
             </div>
           ))}
         </div>
-      ) : query.trim() ? (
+      ) : hasSearched && query.trim() ? (
         <div className="mt-8 text-center max-w-xl mx-auto">
           <p className="text-gray-400">We are working on adding more sounds. Until then, can you try another query?</p>
         </div>
