@@ -132,44 +132,45 @@ export default function SearchBox() {
   }, [query, bpm, key]);
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
+      <h1 className="text-4xl font-bold text-purple-400 mb-2">Find your perfect sound</h1>
+      <p className="text-gray-400 mb-8">Search the vibe not the tag</p>
+      
       <div className="relative w-full">
-        <div className="rounded-xl border border-zinc-700 shadow-lg bg-[#1A1A1A]">
-          <div className="relative flex flex-col gap-2 p-4">
+        <div className="rounded-2xl border border-zinc-800 shadow-lg bg-[#1A1A1A]">
+          <div className="relative flex flex-col gap-2 p-2">
             <div className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-gray-400 ml-3" />
               <textarea
                 className={cn(
-                  "flex min-h-[60px] w-full rounded-md bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none",
-                  "border-0 focus-visible:ring-1 focus-visible:ring-purple-400/20"
+                  "flex min-h-[48px] w-full rounded-md bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none",
+                  "border-0 focus-visible:ring-0"
                 )}
                 placeholder="Find a sound that resembles street lights at night..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mr-2">
                 <button 
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-gray-400 hover:text-gray-300"
                 >
-                  <Settings className="h-4 w-4" />
+                  <Settings className="h-5 w-5" />
+                </button>
+                <button 
+                  onClick={handleSearch}
+                  disabled={loading}
+                  className="bg-purple-600 hover:bg-purple-700 transition-colors p-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  <Send className="h-5 w-5" />
                 </button>
               </div>
-              <button 
-                onClick={handleSearch}
-                disabled={loading}
-                className="bg-purple-600 hover:bg-purple-700 transition-colors px-4 py-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-              >
-                <Send className="h-4 w-4" />
-                Search
-              </button>
             </div>
           </div>
         </div>
 
         {isExpanded && (
-          <div className="absolute w-full mt-2 p-4 bg-[#1A1A1A] rounded-xl border border-zinc-700 z-10">
+          <div className="absolute w-full mt-2 p-4 bg-[#1A1A1A] rounded-xl border border-zinc-800 z-10">
             <div className="flex items-center gap-8">
               <div className="flex-1 flex items-center gap-4">
                 <span className="text-sm font-medium text-gray-300">BPM</span>
