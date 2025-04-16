@@ -46,7 +46,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     }
 
     const { error } = await supabase
-      .from('sounds')
+      .from('user_sounds')
       .delete()
       .eq('id', params.id)
       .eq('library_id', library.id);

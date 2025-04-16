@@ -90,16 +90,19 @@ export async function GET(request: Request) {
       }, { status: 404 });
     }
 
-    // Then get sounds from that library
-    const { data: sounds, error } = await supabase
-      .from('sounds')
+    // Get all sounds from the user's library
+    const { data: sounds, error: soundsError } = await supabase
+      .from('user_sounds')
       .select('*')
-      .eq('library_id', library.id)
-      .order('created_at', { ascending: false });
+      .eq('library_id', library.id);
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (soundsError) {
+      console.error('Sounds error:', soundsError);
+      return NextResponse.json({ 
+        error: 'Failed to fetch sounds', 
+        details: soundsError.message,
+        code: soundsError.code 
+      }, { status: 500 });
     }
 
     // Transform the data to match the client-side interface
@@ -210,31 +213,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // Add sound to user's library
-    const { data: newSound, error: insertError } = await supabase
-      .from('sounds')
-      .insert([
-        {
-          name,
-          audio_url: url,
-          tags: Array.isArray(tags) ? tags : [],
-          bpm,
-          key,
-          library_id: library.id
-        }
-      ])
+    // Insert the sound into the database
+    const { data: sound, error: soundError } = await supabase
+      .from('user_sounds')
+      .insert([{
+        name,
+        audio_url: url,
+        description: body.description,
+        tags: Array.isArray(tags) ? tags : [],
+        bpm,
+        key,
+        library_id: library.id
+      }])
       .select()
       .single();
 
-    if (insertError) {
-      console.error('Insert error:', insertError);
+    if (soundError) {
+      console.error('Insert error:', soundError);
       return NextResponse.json(
-        { error: 'Failed to save sound', details: insertError.message },
+        { error: 'Failed to save sound', details: soundError.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(newSound);
+    return NextResponse.json(sound);
   } catch (error) {
     console.error('Error saving sound:', error);
     return NextResponse.json(
