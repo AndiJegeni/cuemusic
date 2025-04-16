@@ -1,6 +1,7 @@
-export function getAudioSource(url: string | undefined): string {
-  if (!url) {
-    console.warn('No URL provided to getAudioSource');
+export function getAudioSource(url: string | undefined | null): string {
+  // Handle null, undefined, or empty string
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    console.warn('Invalid URL provided to getAudioSource:', url);
     return '';
   }
 
