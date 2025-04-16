@@ -3,6 +3,16 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+interface Sound {
+  id: string;
+  name: string;
+  audioUrl: string;
+  description?: string;
+  tags: { name: string }[];
+  bpm?: number;
+  key?: string;
+}
+
 export async function GET(request: Request) {
   try {
     const cookieStore = await cookies();
@@ -18,29 +28,23 @@ export async function GET(request: Request) {
       }
     );
 
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all sounds for the user
-    const sounds = await prisma.sound.findMany({
-      where: {
-        library: {
-          userId: user.id
-        }
-      },
-      include: {
-        tags: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    const { data: sounds, error } = await supabase
+      .from('sounds')
+      .select('*')
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     // Transform the data to match the client-side interface
-    const transformedSounds = sounds.map(sound => ({
+    const transformedSounds = sounds.map((sound: Sound) => ({
       id: sound.id,
       name: sound.name,
       url: sound.audioUrl,
@@ -62,9 +66,6 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    console.log('Received sound save request');
-    
-    // Get cookies
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -78,182 +79,71 @@ export async function POST(request: Request) {
       }
     );
 
-    // Check authentication
-    const { data: { user: supabaseUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !supabaseUser) {
-      console.error('Authentication error:', authError);
-      return NextResponse.json(
-        { error: 'Unauthorized', details: authError?.message },
-        { status: 401 }
-      );
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse request body
-    let body;
-    try {
-      body = await request.json();
-    } catch (error) {
-      console.error('Failed to parse request body:', error);
-      return NextResponse.json(
-        { error: 'Invalid request body', details: 'Failed to parse JSON' },
-        { status: 400 }
-      );
-    }
-
+    const body = await request.json();
     const { soundId } = body;
+
     if (!soundId) {
-      console.error('Missing soundId in request');
       return NextResponse.json(
         { error: 'Missing soundId', details: 'soundId is required' },
         { status: 400 }
       );
     }
 
-    // Get or create user
-    let user;
-    try {
-      user = await prisma.user.findUnique({
-        where: { id: supabaseUser.id },
-      });
-
-      if (!user) {
-        console.log('Creating new user:', supabaseUser.id);
-        user = await prisma.user.create({
-          data: {
-            id: supabaseUser.id,
-            email: supabaseUser.email,
-            name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Failed to get/create user:', error);
-      return NextResponse.json(
-        { error: 'Failed to create user', details: error instanceof Error ? error.message : 'Unknown error' },
-        { status: 500 }
-      );
-    }
-
-    // Get or create user's library
-    let library;
-    try {
-      library = await prisma.soundLibrary.findFirst({
-        where: { userId: user.id },
-      });
-
-      if (!library) {
-        console.log('Creating new library for user:', user.id);
-        library = await prisma.soundLibrary.create({
-          data: {
-            userId: user.id,
-            name: 'My Collection',
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Failed to get/create library:', error);
-      return NextResponse.json(
-        { error: 'Failed to create collection', details: error instanceof Error ? error.message : 'Unknown error' },
-        { status: 500 }
-      );
-    }
-
-    // Get sound data from Supabase
-    const { data: soundData, error: soundError } = await supabase
+    const { data: sound, error: soundError } = await supabase
       .from('sounds')
       .select('*')
       .eq('id', soundId)
       .single();
 
-    if (soundError || !soundData) {
-      console.error('Failed to fetch sound data:', soundError);
+    if (soundError || !sound) {
       return NextResponse.json(
         { error: 'Sound not found', details: soundError?.message },
         { status: 404 }
       );
     }
 
-    // Check if sound already exists in library
-    const existingSound = await prisma.sound.findFirst({
-      where: {
-        OR: [
-          {
-            name: soundData.name || soundId,
-            libraryId: library.id,
-          },
-          {
-            audioUrl: soundData.audioUrl || soundData.url,
-            libraryId: library.id,
-          }
-        ]
-      },
-    });
+    // Check if sound already exists
+    const { data: existingSound, error: existingError } = await supabase
+      .from('sounds')
+      .select('*')
+      .eq('id', soundId)
+      .eq('user_id', session.user.id)
+      .single();
 
     if (existingSound) {
-      console.log('Sound already exists in library:', {
-        name: soundData.name || soundId,
-        audioUrl: soundData.audioUrl || soundData.url
-      });
       return NextResponse.json(
         { error: 'Sound already exists', details: 'This sound is already in your collection' },
         { status: 400 }
       );
     }
 
-    // Save sound to library
-    try {
-      console.log('Creating sound with data:', {
-        name: soundData.name || soundId,
-        description: soundData.description || '',
-        audioUrl: soundData.audioUrl || soundData.url,
-        libraryId: library.id,
-        tags: soundData.tags || [],
-      });
+    // Add sound to user's collection
+    const { error: insertError } = await supabase
+      .from('sounds')
+      .insert([
+        {
+          ...sound,
+          user_id: session.user.id
+        }
+      ]);
 
-      // Ensure tags is an array
-      const tags = Array.isArray(soundData.tags) ? soundData.tags : [];
-      
-      const savedSound = await prisma.sound.create({
-        data: {
-          name: soundData.name || soundId,
-          description: soundData.description || '',
-          audioUrl: soundData.audioUrl || soundData.url,
-          libraryId: library.id,
-          tags: {
-            connectOrCreate: tags.map((tag: string) => ({
-              where: { name: tag },
-              create: { name: tag },
-            })),
-          },
-        },
-        include: {
-          tags: true,
-        },
-      });
-
-      console.log('Successfully saved sound:', savedSound.id);
+    if (insertError) {
       return NextResponse.json(
-        { success: true, sound: savedSound },
-        { status: 200 }
-      );
-    } catch (error) {
-      console.error('Failed to save sound:', error);
-      return NextResponse.json(
-        { 
-          error: 'Failed to save sound', 
-          details: error instanceof Error ? error.message : 'Unknown error',
-          debug: {
-            soundData,
-            error: error instanceof Error ? error.stack : 'No stack trace'
-          }
-        },
+        { error: 'Failed to save sound', details: insertError.message },
         { status: 500 }
       );
     }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
