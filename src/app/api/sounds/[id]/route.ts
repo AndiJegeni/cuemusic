@@ -2,15 +2,9 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-type RouteParams = {
-  params: {
-    id: string;
-  };
-};
-
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  context: { params: { id: string } }
 ) {
   try {
     const cookieStore = await cookies();
@@ -35,7 +29,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('sounds')
       .delete()
-      .eq('id', params.id)
+      .eq('id', context.params.id)
       .eq('user_id', session.user.id);
 
     if (error) {
