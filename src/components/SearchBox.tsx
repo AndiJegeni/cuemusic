@@ -132,20 +132,14 @@ export default function SearchBox() {
   }, [query, bpm, key]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-white mb-4">Find your perfect sound</h1>
-        <p className="text-gray-400">Search by vibe, not tags</p>
-      </div>
+    <div className="w-full max-w-3xl mx-auto">
       <div className="relative w-full">
         <div className="rounded-xl border border-zinc-700 shadow-lg bg-[#1A1A1A]">
-          <div className="relative flex flex-col gap-2 p-3">
+          <div className="relative flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-gray-400" />
-              <input
-                type="text"
+              <textarea
                 className={cn(
-                  "flex h-9 w-full rounded-md bg-transparent px-2 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+                  "flex min-h-[60px] w-full rounded-md bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none",
                   "border-0 focus-visible:ring-1 focus-visible:ring-purple-400/20"
                 )}
                 placeholder="Find a sound that resembles street lights at night..."
@@ -157,7 +151,7 @@ export default function SearchBox() {
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
                 >
                   <Settings className="h-4 w-4" />
                 </button>
@@ -165,7 +159,7 @@ export default function SearchBox() {
               <button 
                 onClick={handleSearch}
                 disabled={loading}
-                className="bg-purple-600 hover:bg-purple-700 transition-colors px-3 py-1.5 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                className="bg-purple-600 hover:bg-purple-700 transition-colors px-4 py-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
               >
                 <Send className="h-4 w-4" />
                 Search

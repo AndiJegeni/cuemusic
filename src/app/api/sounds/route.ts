@@ -92,21 +92,8 @@ export async function GET(request: Request) {
 
     // Get all sounds from the user's library
     const { data: sounds, error: soundsError } = await supabase
-      .from('user_sounds')
-      .select(`
-        *,
-        sounds: sound_id (
-          id,
-          name,
-          audio_url,
-          description,
-          tags,
-          bpm,
-          key,
-          created_at
-        )
-      `)
-      .eq('library_id', library.id);
+      .from('sounds')
+      .select('*');
 
     if (soundsError) {
       console.error('Sounds error:', soundsError);
@@ -118,15 +105,15 @@ export async function GET(request: Request) {
     }
 
     // Transform the data to match the client-side interface
-    const transformedSounds = (sounds || []).map((userSound: any) => ({
-      id: userSound.sounds.id,
-      name: userSound.sounds.name,
-      url: userSound.sounds.audio_url,
-      description: userSound.sounds.description,
-      tags: Array.isArray(userSound.sounds.tags) ? userSound.sounds.tags : [],
-      bpm: userSound.sounds.bpm,
-      key: userSound.sounds.key,
-      createdAt: userSound.sounds.created_at
+    const transformedSounds = (sounds || []).map((sound: Sound) => ({
+      id: sound.id,
+      name: sound.name,
+      url: sound.audio_url,
+      description: sound.description,
+      tags: Array.isArray(sound.tags) ? sound.tags : [],
+      bpm: sound.bpm,
+      key: sound.key,
+      createdAt: sound.created_at
     }));
 
     return NextResponse.json(transformedSounds);
@@ -225,24 +212,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // First check if the sound exists in the main sounds table
-    const { data: existingSound, error: soundError } = await supabase
+    // First check if the sound exists in the master catalog
+    const { data: existingSound, error: findError } = await supabase
       .from('sounds')
       .select('*')
       .eq('audio_url', url)
       .single();
 
-    let soundId;
-    if (soundError && soundError.code !== 'PGRST116') { // PGRST116 is "not found"
-      console.error('Sound lookup error:', soundError);
+    if (findError && findError.code !== 'PGRST116') {
+      console.error('Find error:', findError);
       return NextResponse.json(
-        { error: 'Failed to check sound existence', details: soundError.message },
+        { error: 'Failed to check sound existence', details: findError.message },
         { status: 500 }
       );
     }
 
+    let soundId: string;
     if (!existingSound) {
-      // Sound doesn't exist, create it in the main sounds table
+      // Sound doesn't exist in master catalog, create it
       const { data: newSound, error: createError } = await supabase
         .from('sounds')
         .insert([{
@@ -257,18 +244,19 @@ export async function POST(request: Request) {
         .single();
 
       if (createError) {
-        console.error('Create sound error:', createError);
+        console.error('Create error:', createError);
         return NextResponse.json(
           { error: 'Failed to create sound', details: createError.message },
           { status: 500 }
         );
       }
+
       soundId = newSound.id;
     } else {
       soundId = existingSound.id;
     }
 
-    // Now create the reference in user_sounds
+    // Now add the sound to the user's library
     const { data: userSound, error: userSoundError } = await supabase
       .from('user_sounds')
       .insert([{
