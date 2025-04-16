@@ -3,14 +3,15 @@
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import { Search, Plus, Trash2 } from 'lucide-react';
+import { Search, Plus, Trash2 as TrashIcon } from 'lucide-react';
 import { getAudioSource } from '@/utils/audio';
 
 interface Sound {
   id: string;
   name: string;
   url: string;
-  tags: string[] | string;
+  description?: string;
+  tags: string[];
   bpm?: number;
   key?: string;
   createdAt: string;
@@ -42,7 +43,8 @@ export default function LibraryPage() {
 
       const response = await fetch('/api/sounds');
       if (!response.ok) {
-        throw new Error('Failed to fetch sounds');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch sounds');
       }
 
       const data = await response.json();
@@ -132,52 +134,44 @@ export default function LibraryPage() {
         {filteredSounds.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredSounds.map((sound) => (
-              <div key={sound.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex justify-between items-start mb-4">
+              <div key={sound.id} className="relative bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{sound.name}</h3>
-                    <div className="flex gap-3 text-sm text-gray-500 mt-1">
-                      {sound.bpm && (
-                        <span className="flex items-center">
-                          <span className="font-medium">{sound.bpm}</span>
-                          <span className="ml-1">BPM</span>
-                        </span>
-                      )}
-                      {sound.key && (
-                        <span className="flex items-center">
-                          <span className="font-medium">{sound.key}</span>
-                        </span>
-                      )}
-                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{sound.name}</h3>
+                    {sound.description && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{sound.description}</p>
+                    )}
                   </div>
                   <button
                     onClick={() => handleDelete(sound.id)}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    className="text-red-500 hover:text-red-700 transition-colors"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <TrashIcon className="h-5 w-5" />
                   </button>
                 </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex flex-wrap gap-2">
-                    {Array.isArray(sound.tags) && sound.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-blue-50 text-blue-600 text-sm rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {sound.tags?.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
 
-                <audio 
-                  controls 
-                  className="w-full [&::-webkit-media-controls-panel]:bg-gray-50"
-                >
-                  <source src={getAudioSource(sound.url)} type="audio/mpeg" />
-                  Your browser does not support the audio element.
-                </audio>
+                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  {sound.bpm && <span>BPM: {sound.bpm}</span>}
+                  {sound.key && <span>Key: {sound.key}</span>}
+                  <span>Added: {new Date(sound.createdAt).toLocaleDateString()}</span>
+                </div>
+
+                <audio
+                  controls
+                  src={getAudioSource(sound.url)}
+                  className="w-full"
+                />
               </div>
             ))}
           </div>

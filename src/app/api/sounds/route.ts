@@ -7,9 +7,11 @@ interface Sound {
   name: string;
   audio_url: string;
   description?: string;
-  tags: { name: string }[];
+  tags: string[];
   bpm?: number;
   key?: string;
+  user_id: string;
+  created_at: string;
 }
 
 export async function GET(request: Request) {
@@ -39,7 +41,12 @@ export async function GET(request: Request) {
       .eq('user_id', session.user.id);
 
     if (error) {
+      console.error('Supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!sounds) {
+      return NextResponse.json([]);
     }
 
     // Transform the data to match the client-side interface
@@ -48,9 +55,10 @@ export async function GET(request: Request) {
       name: sound.name,
       url: sound.audio_url,
       description: sound.description,
-      tags: sound.tags.map(tag => tag.name),
+      tags: Array.isArray(sound.tags) ? sound.tags : [],
       bpm: sound.bpm,
-      key: sound.key
+      key: sound.key,
+      createdAt: sound.created_at
     }));
 
     return NextResponse.json(transformedSounds);
@@ -85,61 +93,40 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { soundId } = body;
+    const { name, url, tags, bpm, key } = body;
 
-    if (!soundId) {
+    if (!name || !url) {
       return NextResponse.json(
-        { error: 'Missing soundId', details: 'soundId is required' },
-        { status: 400 }
-      );
-    }
-
-    const { data: sound, error: soundError } = await supabase
-      .from('sounds')
-      .select('*')
-      .eq('id', soundId)
-      .single();
-
-    if (soundError) {
-      return NextResponse.json(
-        { error: 'Sound not found', details: soundError.message },
-        { status: 404 }
-      );
-    }
-
-    // Check if sound already exists in user's collection
-    const { data: existingSound, error: existingError } = await supabase
-      .from('sounds')
-      .select('*')
-      .eq('id', soundId)
-      .eq('user_id', session.user.id)
-      .single();
-
-    if (existingSound) {
-      return NextResponse.json(
-        { error: 'Sound already exists', details: 'This sound is already in your collection' },
+        { error: 'Missing required fields', details: 'name and url are required' },
         { status: 400 }
       );
     }
 
     // Add sound to user's collection
-    const { error: insertError } = await supabase
+    const { data: newSound, error: insertError } = await supabase
       .from('sounds')
       .insert([
         {
-          ...sound,
+          name,
+          audio_url: url,
+          tags: Array.isArray(tags) ? tags : [],
+          bpm,
+          key,
           user_id: session.user.id
         }
-      ]);
+      ])
+      .select()
+      .single();
 
     if (insertError) {
+      console.error('Insert error:', insertError);
       return NextResponse.json(
         { error: 'Failed to save sound', details: insertError.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(newSound);
   } catch (error) {
     console.error('Error saving sound:', error);
     return NextResponse.json(
