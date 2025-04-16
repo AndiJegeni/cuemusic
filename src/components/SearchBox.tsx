@@ -7,6 +7,7 @@ import { Settings, Send, Search } from 'lucide-react';
 import { getAudioSource } from '@/utils/audio';
 import KeySelector from './KeySelector';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 interface Sound {
   id: string;
@@ -18,6 +19,7 @@ interface Sound {
 }
 
 export default function SearchBox() {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [bpm, setBpm] = useState<string>('');
   const [key, setKey] = useState<string>('');
@@ -26,6 +28,11 @@ export default function SearchBox() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingSound, setSavingSound] = useState<string | null>(null);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -59,6 +66,15 @@ export default function SearchBox() {
   const handleSaveSound = async (sound: Sound) => {
     try {
       setSavingSound(sound.id);
+
+      // Check authentication first
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/signin');
+        return;
+      }
+
+      // Try to save the sound
       const response = await fetch('/api/sounds', {
         method: 'POST',
         headers: {
@@ -76,14 +92,18 @@ export default function SearchBox() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/signin');
+          throw new Error('Please sign in to save sounds');
+        }
         throw new Error(data.details || data.error || 'Failed to save sound');
       }
 
       toast.success('Sound saved to library!');
-      setSavingSound(null);
     } catch (error) {
       console.error('Save error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save sound');
+    } finally {
       setSavingSound(null);
     }
   };
@@ -100,38 +120,37 @@ export default function SearchBox() {
   }, [query, bpm, key]);
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text">
-        Find your perfect sound
-      </h2>
-      <p className="text-gray-400 mb-8">
-        Search the vibe not the tag
-      </p>
-
+    <div className="w-full max-w-3xl mx-auto">
       <div className="relative w-full">
         <div className="rounded-xl border border-zinc-700 shadow-lg bg-[#1A1A1A]">
-          <div className="relative flex items-center">
-            <Search className="absolute left-4 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              className="w-full bg-transparent text-foreground rounded-xl h-[52px] pl-12 pr-24 placeholder:text-muted-foreground focus:outline-none"
-              placeholder="Find a sound that resembles street lights at night..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <div className="absolute right-3 flex gap-2">
-              <button 
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-muted-foreground hover:text-foreground"
-              >
-                <Settings className="h-5 w-5" />
-              </button>
+          <div className="relative flex flex-col gap-2 p-4">
+            <div className="flex items-center gap-2">
+              <textarea
+                className={cn(
+                  "flex min-h-[60px] w-full rounded-md bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none",
+                  "border-0 focus-visible:ring-1 focus-visible:ring-purple-400/20"
+                )}
+                placeholder="Find a sound that resembles street lights at night..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              </div>
               <button 
                 onClick={handleSearch}
                 disabled={loading}
-                className="bg-purple-600 hover:bg-purple-700 transition-colors p-2 rounded-full text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-purple-600 hover:bg-purple-700 transition-colors px-4 py-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
+                Search
               </button>
             </div>
           </div>
@@ -174,10 +193,10 @@ export default function SearchBox() {
         <div className="mt-4 p-4">
           <div className="animate-pulse flex space-x-4">
             <div className="flex-1 space-y-4 py-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-700/50 rounded w-3/4"></div>
               <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                <div className="h-4 bg-gray-700/50 rounded"></div>
+                <div className="h-4 bg-gray-700/50 rounded w-5/6"></div>
               </div>
             </div>
           </div>
@@ -210,13 +229,7 @@ export default function SearchBox() {
             </div>
           ))}
         </div>
-      ) : (
-        !loading && (query || bpm || key) && (
-          <div className="mt-4 text-center text-purple-400/80 p-8">
-            We're working on adding more sounds. In the meantime, try another search.
-          </div>
-        )
-      )}
+      ) : null}
     </div>
   );
 }

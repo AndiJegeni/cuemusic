@@ -46,7 +46,10 @@ export async function GET(request: Request) {
       // Library doesn't exist, create it
       const { data: newLibrary, error: createError } = await supabase
         .from('sound_libraries')
-        .insert([{ user_id: session.user.id }])
+        .insert([{ 
+          user_id: session.user.id,
+          name: 'My Library' // Default name for the library
+        }])
         .select()
         .single();
 
@@ -131,7 +134,10 @@ export async function POST(request: Request) {
       // Library doesn't exist, create it
       const { data: newLibrary, error: createError } = await supabase
         .from('sound_libraries')
-        .insert([{ user_id: session.user.id }])
+        .insert([{ 
+          user_id: session.user.id,
+          name: 'My Library' // Default name for the library
+        }])
         .select()
         .single();
 
