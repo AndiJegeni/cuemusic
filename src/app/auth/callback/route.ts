@@ -8,7 +8,7 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies();
-    const response = NextResponse.redirect(new URL('/upload', request.url));
+    const response = NextResponse.redirect(requestUrl.origin);
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,11 +44,12 @@ export async function GET(request: Request) {
     );
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+    
     if (!error) {
       return response;
     }
   }
 
   // Return the user to an error page with some instructions
-  return NextResponse.redirect(new URL('/auth-error', request.url));
+  return NextResponse.redirect(`${requestUrl.origin}/auth-error`);
 } 
