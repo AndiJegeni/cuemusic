@@ -54,7 +54,11 @@ export default function Library() {
         throw new Error(data.error || 'Failed to fetch sounds');
       }
       const data = await response.json();
-      setSounds(data);
+      const processedData = data.map((sound: Sound) => ({
+        ...sound,
+        tags: Array.isArray(sound.tags) ? sound.tags : []
+      }));
+      setSounds(processedData);
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch sounds');
@@ -121,7 +125,7 @@ export default function Library() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-xl font-semibold text-white">{sound.name}</h3>
-                      {sound.tags && sound.tags.length > 0 && (
+                      {sound.tags && Array.isArray(sound.tags) && sound.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {sound.tags.map((tag, index) => (
                             <span key={index} className="text-xs bg-purple-600/20 text-purple-400 px-2 py-1 rounded-full">

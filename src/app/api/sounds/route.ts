@@ -110,7 +110,7 @@ export async function GET(request: Request) {
       name: sound.name,
       url: sound.audio_url,
       description: sound.description,
-      tags: sound.tags || [],
+      tags: Array.isArray(sound.tags) ? sound.tags : [],
       bpm: sound.bpm,
       key: sound.key,
       createdAt: sound.created_at
