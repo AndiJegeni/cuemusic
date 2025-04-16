@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { prisma } from '@/lib/db';
 import { RequestCookies } from 'next/dist/server/web/spec-extension/cookies';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
@@ -24,13 +23,13 @@ export async function POST(request: Request) {
     );
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check admin access
-    if (user.email !== ADMIN_EMAIL) {
+    if (session.user.email !== ADMIN_EMAIL) {
       return NextResponse.json({ error: 'Admin access only' }, { status: 403 });
     }
 
@@ -58,13 +57,21 @@ export async function POST(request: Request) {
       .getPublicUrl(`${libraryId}/${file.name}`);
 
     // Create sound record in database
-    const sound = await prisma.sound.create({
-      data: {
-        name: file.name,
-        audioUrl: publicUrl,
-        libraryId,
-      },
-    });
+    const { data: sound, error: soundError } = await supabase
+      .from('sounds')
+      .insert([
+        {
+          name: file.name,
+          audio_url: publicUrl,
+          library_id: libraryId,
+        }
+      ])
+      .select()
+      .single();
+
+    if (soundError) {
+      return NextResponse.json({ error: soundError.message }, { status: 500 });
+    }
 
     return NextResponse.json(sound);
   } catch (error) {
