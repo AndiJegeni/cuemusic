@@ -158,7 +158,7 @@ export default function SearchBox() {
                 <button 
                   onClick={handleSearch}
                   disabled={loading}
-                  className="bg-purple-600 hover:bg-purple-700 transition-colors p-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="bg-purple-600 hover:bg-purple-700 transition-colors p-2 rounded-full text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   <Send className="h-5 w-5" />
                 </button>
