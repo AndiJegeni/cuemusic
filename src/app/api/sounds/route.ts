@@ -93,7 +93,8 @@ export async function GET(request: Request) {
     // Get all sounds from the user's library
     const { data: sounds, error: soundsError } = await supabase
       .from('sounds')
-      .select('*');
+      .select('*')
+      .eq('library_id', library.id);
 
     if (soundsError) {
       console.error('Sounds error:', soundsError);
