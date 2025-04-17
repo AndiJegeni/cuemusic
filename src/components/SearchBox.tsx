@@ -138,7 +138,7 @@ export default function SearchBox() {
                   "flex h-10 w-full bg-transparent px-3 text-sm shadow-sm placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
                   "border-0 focus-visible:ring-0"
                 )}
-                placeholder="Find a sound that resembles street lights at night..."
+                placeholder="A night at a broadway show with smooth jazz"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -213,13 +213,13 @@ export default function SearchBox() {
           </div>
         </div>
       ) : results.length > 0 ? (
-        <div className="mt-4 space-y-3 max-w-xl mx-auto w-full">
+        <div className="mt-4 space-y-3 w-full max-w-xl mx-auto px-2 sm:px-0">
           {results.map((sound) => (
-            <div key={sound.id} className="bg-[#1a1a1a] rounded-xl p-3 flex flex-col gap-2 border border-gray-800/50 hover:border-gray-700/50 transition-colors">
-              <div className="flex justify-between items-center gap-4">
-                <div className="min-w-0">
+            <div key={sound.id} className="bg-[#1a1a1a] rounded-xl p-3 sm:p-4 flex flex-col gap-2 border border-gray-800/50 hover:border-gray-700/50 transition-colors">
+              <div className="flex justify-between items-center gap-2 sm:gap-4">
+                <div className="min-w-0 flex-1">
                   <h3 className="text-lg font-medium text-white truncate">{sound.name}</h3>
-                  <div className="text-xs text-gray-400 flex items-center gap-3 mt-0.5">
+                  <div className="text-xs text-gray-400 flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                     {sound.bpm && <span>BPM: {sound.bpm}</span>}
                     {sound.key && <span>Key: {sound.key}</span>}
                   </div>
@@ -227,7 +227,7 @@ export default function SearchBox() {
                 <button
                   onClick={() => handleSaveSound(sound)}
                   disabled={savingSound === sound.id}
-                  className="shrink-0 px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors duration-200"
+                  className="shrink-0 px-2 py-1 sm:px-3 sm:py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   {savingSound === sound.id ? 'Saving...' : 'Save'}
                 </button>
@@ -242,9 +242,12 @@ export default function SearchBox() {
             </div>
           ))}
         </div>
-      ) : hasSearched && query.trim() ? (
-        <div className="mt-8 text-center max-w-xl mx-auto">
-          <p className="text-gray-400">We are working on adding more sounds. Until then, can you try another query?</p>
+      ) : hasSearched && (query.trim() || bpm || key) ? (
+        <div className="mt-8 text-center max-w-xl mx-auto px-4">
+          <p className="text-gray-300 text-lg mb-2">No sounds found matching your criteria.</p>
+          <p className="text-gray-400">
+            Try adjusting your search query, BPM, or key. For example, try a broader description or remove the BPM/Key filter.
+          </p>
         </div>
       ) : null}
     </div>
