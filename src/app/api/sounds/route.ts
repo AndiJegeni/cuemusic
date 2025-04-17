@@ -237,7 +237,7 @@ export async function POST(request: Request) {
     const { data: existingSound, error: findError } = await supabase
       .from('sounds')
       .select('*')
-      .eq('audio_url', url)
+      .eq('url', url)
       .single();
 
     if (findError && findError.code !== 'PGRST116') {
@@ -255,7 +255,7 @@ export async function POST(request: Request) {
         .from('sounds')
         .insert([{
           name,
-          audio_url: url,
+          url: url,
           description: body.description,
           tags: Array.isArray(tags) ? tags : [],
           bpm,
