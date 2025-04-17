@@ -105,19 +105,30 @@ export default function Library() {
 
   // Handler to get audio duration
   const handleLoadedMetadata = (event: React.SyntheticEvent<HTMLAudioElement, Event>, soundId: string) => {
-    setSoundDurations(prev => ({
-      ...prev,
-      [soundId]: event.currentTarget.duration
-    }));
+    const duration = event.currentTarget.duration;
+    // Only update state if duration is a valid, finite number
+    if (duration && isFinite(duration)) {
+      setSoundDurations(prev => ({
+        ...prev,
+        [soundId]: duration
+      }));
+    }
   };
 
   // Filter sounds based on duration
   const filteredSounds = sounds.filter(sound => {
     const duration = soundDurations[sound.id];
-    if (duration === undefined) return true; // Don't filter if duration not loaded yet
+    // Ensure duration is a valid number before filtering
+    if (duration === undefined || !isFinite(duration)) {
+      // If no duration filter is set, include sounds with undefined/invalid duration
+      return !minDuration && !maxDuration;
+    }
     const min = minDuration ? parseFloat(minDuration) : 0;
     const max = maxDuration ? parseFloat(maxDuration) : Infinity;
-    return duration >= min && duration <= max;
+    // Ensure min/max are valid numbers for comparison
+    const validMin = isFinite(min) ? min : 0;
+    const validMax = isFinite(max) ? max : Infinity;
+    return duration >= validMin && duration <= validMax;
   });
 
   return (
