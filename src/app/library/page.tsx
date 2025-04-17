@@ -105,9 +105,9 @@ export default function Library() {
 
   // Handler to get audio duration
   const handleLoadedMetadata = (event: React.SyntheticEvent<HTMLAudioElement, Event>, soundId: string) => {
-    const duration = event.currentTarget.duration;
-    // Only update state if duration is a valid, finite number
-    if (duration && isFinite(duration)) {
+    // Check if event.currentTarget and its duration are valid
+    if (event.currentTarget && typeof event.currentTarget.duration === 'number' && isFinite(event.currentTarget.duration)) {
+      const duration = event.currentTarget.duration;
       setSoundDurations(prev => ({
         ...prev,
         [soundId]: duration
@@ -117,18 +117,34 @@ export default function Library() {
 
   // Filter sounds based on duration
   const filteredSounds = sounds.filter(sound => {
-    const duration = soundDurations[sound.id];
-    // Ensure duration is a valid number before filtering
-    if (duration === undefined || !isFinite(duration)) {
-      // If no duration filter is set, include sounds with undefined/invalid duration
-      return !minDuration && !maxDuration;
+    // Basic check for valid sound object
+    if (!sound || !sound.id) {
+      return false;
     }
-    const min = minDuration ? parseFloat(minDuration) : 0;
-    const max = maxDuration ? parseFloat(maxDuration) : Infinity;
-    // Ensure min/max are valid numbers for comparison
-    const validMin = isFinite(min) ? min : 0;
-    const validMax = isFinite(max) ? max : Infinity;
-    return duration >= validMin && duration <= validMax;
+    // Check if filters are active (have valid numeric values)
+    const minFilterValue = minDuration ? parseFloat(minDuration) : NaN;
+    const maxFilterValue = maxDuration ? parseFloat(maxDuration) : NaN;
+    const isMinFilterActive = isFinite(minFilterValue);
+    const isMaxFilterActive = isFinite(maxFilterValue);
+    // If no filters are active, include the sound
+    if (!isMinFilterActive && !isMaxFilterActive) {
+      return true;
+    }
+    // Filters are active, so we need a valid duration for this sound
+    const duration = soundDurations[sound.id];
+    if (duration === undefined || !isFinite(duration)) {
+      // Duration not available/valid, exclude the sound since filters are active
+      return false;
+    }
+    // Duration is valid, apply the active filters
+    let include = true;
+    if (isMinFilterActive && duration < minFilterValue) {
+      include = false;
+    }
+    if (isMaxFilterActive && duration > maxFilterValue) {
+      include = false;
+    }
+    return include;
   });
 
   return (
