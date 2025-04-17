@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 interface Sound {
   id: string;
   name: string;
-  audio_url: string;
+  url: string;
   description?: string;
   tags?: string[] | null;
   bpm?: number;
@@ -129,7 +129,7 @@ export async function GET(request: Request) {
     const transformedSounds = (sounds || []).map((sound: Sound) => ({
       id: sound.id,
       name: sound.name,
-      url: sound.audio_url,
+      url: sound.url,
       description: sound.description,
       tags: Array.isArray(sound.tags) ? sound.tags : [],
       bpm: sound.bpm,
