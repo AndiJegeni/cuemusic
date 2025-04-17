@@ -90,25 +90,31 @@ export async function GET(request: Request) {
       }, { status: 404 });
     }
 
-    // Get all sounds from the user's library
-    const { data: sounds, error: soundsError } = await supabase
+    // First get the sound IDs from user_sounds
+    const { data: userSounds, error: userSoundsError } = await supabase
       .from('user_sounds')
-      .select(`
-        id,
-        sound_id,
-        library_id,
-        sounds (
-          id,
-          name,
-          audio_url,
-          description,
-          tags,
-          bpm,
-          key,
-          created_at
-        )
-      `)
+      .select('sound_id')
       .eq('library_id', library.id);
+
+    if (userSoundsError) {
+      console.error('User sounds error:', userSoundsError);
+      return NextResponse.json({ 
+        error: 'Failed to fetch user sounds', 
+        details: userSoundsError.message,
+        code: userSoundsError.code 
+      }, { status: 500 });
+    }
+
+    if (!userSounds || userSounds.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    // Get the sounds using the sound IDs
+    const soundIds = userSounds.map(us => us.sound_id);
+    const { data: sounds, error: soundsError } = await supabase
+      .from('sounds')
+      .select('*')
+      .in('id', soundIds);
 
     if (soundsError) {
       console.error('Sounds error:', soundsError);
@@ -120,15 +126,15 @@ export async function GET(request: Request) {
     }
 
     // Transform the data to match the client-side interface
-    const transformedSounds = (sounds || []).map((userSound: any) => ({
-      id: userSound.sound_id,
-      name: userSound.sounds.name,
-      url: userSound.sounds.audio_url,
-      description: userSound.sounds.description,
-      tags: Array.isArray(userSound.sounds.tags) ? userSound.sounds.tags : [],
-      bpm: userSound.sounds.bpm,
-      key: userSound.sounds.key,
-      createdAt: userSound.sounds.created_at
+    const transformedSounds = (sounds || []).map((sound: Sound) => ({
+      id: sound.id,
+      name: sound.name,
+      url: sound.audio_url,
+      description: sound.description,
+      tags: Array.isArray(sound.tags) ? sound.tags : [],
+      bpm: sound.bpm,
+      key: sound.key,
+      createdAt: sound.created_at
     }));
 
     return NextResponse.json(transformedSounds);
