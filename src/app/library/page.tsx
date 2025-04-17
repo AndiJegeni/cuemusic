@@ -26,7 +26,7 @@ export default function Library() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingSound, setDeletingSound] = useState<string | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<HTMLAudioElement | null>(null);
+  const playingAudioRef = useRef<HTMLAudioElement | null>(null);
   const [soundDurations, setSoundDurations] = useState<{ [id: string]: number }>({});
   const [minDuration, setMinDuration] = useState<string>('');
   const [maxDuration, setMaxDuration] = useState<string>('');
@@ -94,13 +94,21 @@ export default function Library() {
     }
   };
 
-  // Handler for single audio playback
+  // Handler for single audio playback - using useRef
   const handlePlay = (event: React.SyntheticEvent<HTMLAudioElement, Event>) => {
     const currentAudio = event.currentTarget;
-    if (playingAudio && playingAudio !== currentAudio) {
-      playingAudio.pause();
+    console.log('handlePlay triggered', { currentAudioSrc: currentAudio.src });
+    console.log('Current playingAudioRef.current:', playingAudioRef.current);
+    // Check the ref for the currently playing audio
+    if (playingAudioRef.current && playingAudioRef.current !== currentAudio) {
+      console.log('Attempting to pause previous audio (ref):', playingAudioRef.current.src);
+      playingAudioRef.current.pause();
+    } else {
+      console.log('No previous audio to pause or it is the same audio (ref).');
     }
-    setPlayingAudio(currentAudio);
+    // Update the ref to the new audio element
+    playingAudioRef.current = currentAudio;
+    console.log('Set playingAudioRef.current to:', playingAudioRef.current);
   };
 
   // Handler to get audio duration

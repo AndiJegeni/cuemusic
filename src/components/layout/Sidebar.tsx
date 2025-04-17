@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Library, LogOut, LogIn } from 'lucide-react';
+import { Home, Library, LogOut, LogIn, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -104,10 +104,17 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   return (
     <div
       className={cn(
-        'flex h-full flex-col bg-[#0A0A0A] border-r border-[#1A1A1A]',
+        'relative flex h-full flex-col bg-[#0A0A0A] border-r border-[#1A1A1A] transition-all duration-300 ease-in-out',
         collapsed ? 'w-[72px]' : 'w-[240px]'
       )}
     >
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="absolute top-3 right-[-12px] z-10 p-1 bg-[#1A1A1A] border border-[#2A2A2A] rounded-full text-gray-400 hover:text-white hover:bg-[#2C2C2E] transition-colors"
+      >
+        <Menu className="h-4 w-4" />
+      </button>
+
       <div className="flex h-[60px] items-center px-4">
         <Link href="/" className="flex items-center gap-2">
           <span className="text-xl font-semibold bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text">
