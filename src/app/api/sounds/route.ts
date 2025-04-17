@@ -92,8 +92,22 @@ export async function GET(request: Request) {
 
     // Get all sounds from the user's library
     const { data: sounds, error: soundsError } = await supabase
-      .from('sounds')
-      .select('*')
+      .from('user_sounds')
+      .select(`
+        id,
+        sound_id,
+        library_id,
+        sounds (
+          id,
+          name,
+          audio_url,
+          description,
+          tags,
+          bpm,
+          key,
+          created_at
+        )
+      `)
       .eq('library_id', library.id);
 
     if (soundsError) {
@@ -106,15 +120,15 @@ export async function GET(request: Request) {
     }
 
     // Transform the data to match the client-side interface
-    const transformedSounds = (sounds || []).map((sound: Sound) => ({
-      id: sound.id,
-      name: sound.name,
-      url: sound.audio_url,
-      description: sound.description,
-      tags: Array.isArray(sound.tags) ? sound.tags : [],
-      bpm: sound.bpm,
-      key: sound.key,
-      createdAt: sound.created_at
+    const transformedSounds = (sounds || []).map((userSound: any) => ({
+      id: userSound.sound_id,
+      name: userSound.sounds.name,
+      url: userSound.sounds.audio_url,
+      description: userSound.sounds.description,
+      tags: Array.isArray(userSound.sounds.tags) ? userSound.sounds.tags : [],
+      bpm: userSound.sounds.bpm,
+      key: userSound.sounds.key,
+      createdAt: userSound.sounds.created_at
     }));
 
     return NextResponse.json(transformedSounds);
