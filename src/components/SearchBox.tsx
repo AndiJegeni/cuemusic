@@ -29,6 +29,7 @@ export default function SearchBox() {
   const [error, setError] = useState<string | null>(null);
   const [savingSound, setSavingSound] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,6 +43,7 @@ export default function SearchBox() {
     setLoading(true);
     setError(null);
     setHasSearched(true);
+    setCheckoutUrl(null); // Reset checkout URL
 
     try {
       const searchParams = new URLSearchParams();
@@ -50,12 +52,17 @@ export default function SearchBox() {
       if (key) searchParams.append('key', key);
 
       const response = await fetch(`/api/search?${searchParams}`);
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to search sounds');
+        throw new Error(data.error || 'Failed to search sounds');
       }
 
-      const data = await response.json();
-      setResults(data);
+      if (data.checkoutUrl) {
+        setCheckoutUrl(data.checkoutUrl);
+      } else {
+        setResults(data);
+      }
     } catch (err) {
       console.error('Search error:', err);
       setError(err instanceof Error ? err.message : 'Failed to search sounds');
@@ -127,6 +134,18 @@ export default function SearchBox() {
       <h1 className="text-4xl font-bold text-purple-400 mb-2">Find your perfect sound</h1>
       <p className="text-gray-400 mb-8">Search the vibe not the tag</p>
       
+      {checkoutUrl && (
+        <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-500/20 text-yellow-400 rounded-lg">
+          <p>You have reached your search limit. Upgrade to premium to continue searching.</p>
+          <button
+            onClick={() => window.location.href = checkoutUrl}
+            className="mt-2 bg-purple-600 hover:bg-purple-700 transition-colors p-2 rounded-full text-white"
+          >
+            Upgrade to Premium
+          </button>
+        </div>
+      )}
+
       <div className="relative w-full">
         <div className="rounded-2xl border border-zinc-800 shadow-lg bg-[#1A1A1A]">
           <div className="relative flex flex-col gap-2 p-2">

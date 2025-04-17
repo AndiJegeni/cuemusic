@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
+import type { Stripe as StripeType } from 'stripe';
 
 interface Sound {
   id: string;
@@ -57,7 +59,32 @@ function calculateMatchScore(tags: string[], searchWords: string[]): number {
   return (exactMatches * 2) + (partialMatches * 0.5);
 }
 
+// Function to generate Stripe Checkout URL
+async function generateStripeCheckoutUrl(userId: string): Promise<string> {
+  // Initialize Stripe inside the function
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2025-03-31.basil',
+  }) as StripeType;
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [{
+      price: process.env.STRIPE_PRICE_ID!,
+      quantity: 1,
+    }],
+    mode: 'subscription',
+    success_url: `${process.env.BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.BASE_URL}/cancel`,
+    metadata: { userId },
+  });
+  return session.url!;
+}
+
 export async function GET(request: Request) {
+  // Log environment variables inside the handler
+  console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log('Supabase Anon Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q')?.toLowerCase() || '';
   const bpm = searchParams.get('bpm');
@@ -78,64 +105,113 @@ export async function GET(request: Request) {
     }
   );
 
-  try {
-    // Get all sounds and filter them in memory
-    const { data: allSounds, error } = await supabase
-      .from('sounds')
-      .select('*');
+  // Get the user session
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (error) {
-      console.error('Supabase search error:', error);
-      throw error;
+  if (sessionError) {
+    console.error('Session error:', sessionError);
+    return NextResponse.json({ error: 'Failed to retrieve session' }, { status: 500 });
+  }
+
+  if (!session) {
+    // Handle unauthenticated users if necessary, or return an error
+    // For now, let's assume search requires authentication
+    return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+  }
+
+  const userId = session.user.id; // Use the actual user ID from the session
+
+  // Fetch user data (search_count, is_premium)
+  let { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('search_count, is_premium')
+    .eq('id', userId)
+    .single();
+
+  if (userError) {
+    if (userError.code === 'PGRST116') { 
+      console.warn(`User record not found for ID: ${userId}. Assuming 0 searches and not premium.`);
+      userData = { search_count: 0, is_premium: false }; 
+    } else {
+      console.error('User fetch error:', userError);
+      return NextResponse.json({ error: 'Failed to fetch user data' }, { status: 500 });
+    }
+  }
+
+  // Ensure userData is not null before proceeding
+  if (!userData) {
+    console.error('User data is null after fetch and error handling');
+    return NextResponse.json({ error: 'Failed to process user data' }, { status: 500 });
+  }
+
+  // Check search count and premium status
+  if (userData.is_premium || userData.search_count < 15) {
+    // Increment search count only if the user is not premium
+    if (!userData.is_premium) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ search_count: userData.search_count + 1 })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('Failed to update search count:', updateError);
+      }
     }
 
-    // Split query into words and normalize them
-    const searchWords = splitIntoWords(query);
+    // Proceed with search logic
+    try {
+      const { data: allSounds, error } = await supabase
+        .from('sounds')
+        .select('*');
 
-    // Filter sounds based on all criteria
-    let filteredSounds = (allSounds as Sound[])?.filter(sound => {
-      // Tag matching
-      let matchesTags = true;
-      if (query) {
-        const tagsArray = typeof sound.tags === 'string' 
-          ? sound.tags.split(',').map(tag => tag.trim())
-          : Array.isArray(sound.tags) ? sound.tags : [];
-        
-        // Calculate match score
-        const matchScore = calculateMatchScore(tagsArray, searchWords);
-        sound.matchScore = matchScore;
-        
-        // Only include sounds that have at least one exact match
-        matchesTags = matchScore >= 2; // At least one exact match (worth 2 points)
+      if (error) {
+        console.error('Supabase search error:', error);
+        throw error;
       }
 
-      // BPM matching (with small tolerance)
-      let matchesBpm = true;
-      if (bpm && sound.bpm) {
-        const targetBpm = parseInt(bpm);
-        const tolerance = 5; // Allow ±5 BPM
-        matchesBpm = Math.abs(sound.bpm - targetBpm) <= tolerance;
-      }
+      const searchWords = splitIntoWords(query);
 
-      // Key matching
-      let matchesKey = true;
-      if (key && sound.key) {
-        matchesKey = sound.key.toLowerCase() === key.toLowerCase();
-      }
+      let filteredSounds = (allSounds as Sound[])?.filter(sound => {
+        let matchesTags = true;
+        if (query) {
+          const tagsArray = typeof sound.tags === 'string' 
+            ? sound.tags.split(',').map(tag => tag.trim())
+            : Array.isArray(sound.tags) ? sound.tags : [];
+          
+          const matchScore = calculateMatchScore(tagsArray, searchWords);
+          sound.matchScore = matchScore;
+          matchesTags = matchScore >= 2; 
+        }
 
-      return matchesTags && matchesBpm && matchesKey;
-    }) || [];
+        let matchesBpm = true;
+        if (bpm && sound.bpm) {
+          const targetBpm = parseInt(bpm);
+          const tolerance = 5; 
+          matchesBpm = Math.abs(sound.bpm - targetBpm) <= tolerance;
+        }
 
-    // Sort results by match score (highest first)
-    filteredSounds = filteredSounds.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+        let matchesKey = true;
+        if (key && sound.key) {
+          matchesKey = sound.key.toLowerCase() === key.toLowerCase();
+        }
 
-    console.log('Found sounds:', filteredSounds);
-    return NextResponse.json(filteredSounds);
-  } catch (error) {
-    console.error('Search error:', error);
-    return NextResponse.json(
-      { error: 'Failed to search sounds' },
-      { status: 500 }
-    );
+        return matchesTags && matchesBpm && matchesKey;
+      }) || [];
+
+      filteredSounds = filteredSounds.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+
+      console.log('Found sounds:', filteredSounds.length);
+      return NextResponse.json(filteredSounds);
+    } catch (error) {
+      console.error('Search error:', error);
+      return NextResponse.json(
+        { error: 'Failed to search sounds' },
+        { status: 500 }
+      );
+    }
+  } else {
+    // User has reached the search limit
+    const checkoutUrl = await generateStripeCheckoutUrl(userId);
+    return NextResponse.json({ message: 'Upgrade to Premium', checkoutUrl });
   }
 } 

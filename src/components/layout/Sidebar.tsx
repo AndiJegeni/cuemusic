@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Library, LogOut, LogIn, Menu } from 'lucide-react';
+import { Home, Library, LogOut, LogIn, Menu, User as UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -144,23 +144,23 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       <div className="flex h-[60px] items-center justify-between px-4 border-t border-[#1A1A1A]">
         {user ? (
           <>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium">
-                {user?.email ? user.email[0].toUpperCase() : 'G'}
+            <Link href="/profile" className="flex items-center gap-3 group flex-1 min-w-0">
+              <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium group-hover:ring-2 group-hover:ring-purple-500 transition-all">
+                {user?.email ? user.email[0].toUpperCase() : <UserIcon className="h-5 w-5" />}
               </div>
               {!collapsed && (
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-white">
-                    {user?.email ? user.email.split('@')[0] : 'Guest'}
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-white truncate">
+                    {user?.email ? user.email.split('@')[0] : 'Profile'}
                   </span>
                 </div>
               )}
-            </div>
+            </Link>
             {!collapsed && (
               <button
                 onClick={handleSignOut}
                 disabled={isLoading}
-                className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors text-gray-400 hover:text-white disabled:opacity-50"
+                className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors text-gray-400 hover:text-white disabled:opacity-50 flex-shrink-0"
               >
                 <LogOut className="h-5 w-5" />
               </button>
